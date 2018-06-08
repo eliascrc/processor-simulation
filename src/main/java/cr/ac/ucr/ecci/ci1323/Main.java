@@ -1,9 +1,12 @@
 package cr.ac.ucr.ecci.ci1323;
 
+import cr.ac.ucr.ecci.ci1323.control.SimulationController;
+
 public class Main {
 
     public static void main(String[] args) {
-        System.out.println("Dummy main! Bye!");
+        SimulationController simulationController = new SimulationController();
+        simulationController.runSimulation();
     }
 
 }
