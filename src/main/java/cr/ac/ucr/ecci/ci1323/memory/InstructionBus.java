@@ -4,6 +4,10 @@ public class InstructionBus extends Bus {
 
     InstructionBlock[] instructionMemory;
 
+    InstructionBus(InstructionBlock[] instructionMemory) {
+        this.instructionMemory = instructionMemory;
+    }
+
     public InstructionBlock getInstructionBlock(int index) {
         return instructionMemory[index];
     }
