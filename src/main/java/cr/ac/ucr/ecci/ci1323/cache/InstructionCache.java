@@ -1,4 +1,4 @@
-package main.java.cr.ac.ucr.ecci.ci1323.cache;
+package cr.ac.ucr.ecci.ci1323.cache;
 
 /**
  * Instruction cache used by both cores, which contains its positions and instruction bus for communication
