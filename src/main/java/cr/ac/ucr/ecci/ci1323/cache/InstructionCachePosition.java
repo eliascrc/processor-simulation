@@ -1,4 +1,6 @@
-package main.java.cr.ac.ucr.ecci.ci1323.cache;
+package cr.ac.ucr.ecci.ci1323.cache;
+
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Represents the position of a instruction cache, with its respective block and tag.
@@ -9,10 +11,12 @@ public class InstructionCachePosition {
 
     private int tag;
     private InstructionBlock instructionBlock;
+    private ReentrantLock cachePositionLock;
 
     public InstructionCachePosition(int tag, InstructionBlock instructionBlock) {
         this.tag = tag;
         this.instructionBlock = instructionBlock;
+        this.cachePositionLock = new ReentrantLock();
     }
 
     public int getTag() {
