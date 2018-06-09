@@ -1,5 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.control;
 
+import cr.ac.ucr.ecci.ci1323.control.context.Context;
+import cr.ac.ucr.ecci.ci1323.control.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.core.CoreOne;
 import cr.ac.ucr.ecci.ci1323.core.CoreZero;
 
@@ -27,8 +29,8 @@ public class SimulationController {
     public void runSimulation() {
         this.parseContextFile();
 
-        this.coreZero = new CoreZero(5, this.contextQueue.getNextContext(), this.contextQueue);
-        this.coreOne = new CoreOne(5, this.contextQueue.getNextContext(), this.contextQueue);
+        this.coreZero = new CoreZero(5, this.contextQueue.getNextContext(), this);
+        this.coreOne = new CoreOne(5, this.contextQueue.getNextContext(), this);
 
         this.coreZero.run();
         this.coreOne.run();

@@ -1,4 +1,4 @@
-package cr.ac.ucr.ecci.ci1323.control;
+package cr.ac.ucr.ecci.ci1323.control.context;
 
 /**
  * Model for the context of a Thread within the processor.
