@@ -1,4 +1,4 @@
-package main.java.cr.ac.ucr.ecci.ci1323.cache;
+package cr.ac.ucr.ecci.ci1323.cache;
 
 /**
  * Possible states for a data cache position block.
