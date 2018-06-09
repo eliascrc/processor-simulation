@@ -22,9 +22,10 @@ public class FileParser {
 
     public FileParser(ContextQueue contextQueue, InstructionBus instructionBus) {
         boolean fileExists = true;
-
+        this.files = new ArrayList<File>();
         for (int i = 0; fileExists; i++) {
-            File file = new File("0.txt");
+            ClassLoader classLoader = getClass().getClassLoader();
+            File file = new File(classLoader.getResource(i + ".txt").getFile());
             fileExists = file.exists();
             System.out.println(file.exists());
             if (fileExists)
