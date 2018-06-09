@@ -1,4 +1,4 @@
-package cr.ac.ucr.ecci.ci1323.control.parser;
+package cr.ac.ucr.ecci.ci1323.controller.parser;
 
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;

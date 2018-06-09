@@ -1,4 +1,4 @@
-package cr.ac.ucr.ecci.ci1323.control.context;
+package cr.ac.ucr.ecci.ci1323.context;
 
 /**
  * Model for the context of a Thread within the processor.
@@ -11,18 +11,18 @@ public class Context {
     /**
      * The current program counter of the context.
      */
-    private int programCounter;
+    private volatile int programCounter;
 
     /**
      * The register values of the context.
      */
-    private int[] registers;
+    private volatile int[] registers;
 
     /**
      * The clock tics that the context has consumed.
      * It is used for statistics.
      */
-    private int executionTics;
+    private volatile int executionTics;
 
     /**
      * Constructor that sets the PC, initializes the registers and sets the tics to 0.

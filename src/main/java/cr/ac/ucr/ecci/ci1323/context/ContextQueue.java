@@ -1,4 +1,4 @@
-package cr.ac.ucr.ecci.ci1323.control.context;
+package cr.ac.ucr.ecci.ci1323.context;
 
 import cr.ac.ucr.ecci.ci1323.support.ContextQueueLockException;
 

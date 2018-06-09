@@ -1,7 +1,7 @@
-package cr.ac.ucr.ecci.ci1323.control;
+package cr.ac.ucr.ecci.ci1323.controller;
 
-import cr.ac.ucr.ecci.ci1323.control.context.Context;
-import cr.ac.ucr.ecci.ci1323.control.context.ContextQueue;
+import cr.ac.ucr.ecci.ci1323.context.Context;
+import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.core.CoreOne;
 import cr.ac.ucr.ecci.ci1323.core.CoreZero;
 
