@@ -1,15 +1,15 @@
 package cr.ac.ucr.ecci.ci1323.core;
 
-import cr.ac.ucr.ecci.ci1323.control.Context;
-import cr.ac.ucr.ecci.ci1323.control.ContextQueue;
-import cr.ac.ucr.ecci.ci1323.control.MissHandler;
+import cr.ac.ucr.ecci.ci1323.control.SimulationController;
+import cr.ac.ucr.ecci.ci1323.control.context.Context;
+import cr.ac.ucr.ecci.ci1323.control.context.ContextQueue;
 
 public class CoreZero extends AbstractCore {
 
     private MissHandler missHandler;
 
-    public CoreZero(int maxQuantum, Context startingContext, ContextQueue contextQueue) {
-        super(maxQuantum, startingContext, contextQueue);
+    public CoreZero(int maxQuantum, Context startingContext, SimulationController simulationController) {
+        super(maxQuantum, startingContext, simulationController);
     }
 
     @Override
@@ -17,7 +17,7 @@ public class CoreZero extends AbstractCore {
         System.out.println("Core Zero! Ready. The context is: ");
         super.currentContext.print();
 
-        this.missHandler = new MissHandler(this.currentContext);
+        this.missHandler = new MissHandler(super.instructionCache, super.dataCache, this.currentContext);
         this.missHandler.run();
     }
 
