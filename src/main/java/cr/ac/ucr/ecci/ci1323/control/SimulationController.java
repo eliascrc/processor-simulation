@@ -7,8 +7,8 @@ import java.util.ArrayList;
 
 public class SimulationController {
 
-    private ContextQueue contextQueue;
-    private ArrayList<Context> finishedThreads;
+    private volatile ContextQueue contextQueue;
+    private volatile ArrayList<Context> finishedThreads;
     private CoreZero coreZero;
     private CoreOne coreOne;
 
@@ -32,6 +32,14 @@ public class SimulationController {
 
         this.coreZero.run();
         this.coreOne.run();
+    }
+
+    public ContextQueue getContextQueue() {
+        return contextQueue;
+    }
+
+    public ArrayList<Context> getFinishedThreads() {
+        return finishedThreads;
     }
 
 }
