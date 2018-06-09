@@ -19,8 +19,8 @@ public class SimulationController {
 
     private void parseContextFile () {
 
-        this.contextQueue.pushContext(new Context(21, new int[]{2, 2, 2, 2, 2}));
-        this.contextQueue.pushContext(new Context(21, new int[]{2, 3, 3, 2, 3}));
+        this.contextQueue.pushContext(new Context(21));
+        this.contextQueue.pushContext(new Context(21));
 
     }
 
