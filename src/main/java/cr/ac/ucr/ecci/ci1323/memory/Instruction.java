@@ -4,7 +4,7 @@ public class Instruction {
 
     int[] instructionFields;
 
-    Instruction(int[] instructionFields) {
+    public Instruction(int[] instructionFields) {
         this.instructionFields = instructionFields;
     }
 
