@@ -10,4 +10,8 @@ public abstract class Bus {
         return true;
     }
 
+    protected Lock getLock() {
+        return this.busLock;
+    }
+
 }
