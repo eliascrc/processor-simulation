@@ -1,7 +1,9 @@
 package cr.ac.ucr.ecci.ci1323.control.parser;
 
+import cr.ac.ucr.ecci.ci1323.control.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
+import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
 import cr.ac.ucr.ecci.ci1323.support.InvalidInstructionException;
 import org.apache.commons.io.FileUtils;
 
@@ -14,11 +16,19 @@ public class FileParser {
 
     List<File> files;
 
-    public FileParser() {
+    public static void main(String[] args) {
+        new FileParser(new ContextQueue(), new InstructionBus()).parseFiles();
+    }
+
+    public FileParser(ContextQueue contextQueue, InstructionBus instructionBus) {
         boolean fileExists = true;
 
         for (int i = 0; fileExists; i++) {
-            File file = new File(i + ".txt");
+            File file = new File("0.txt");
+            fileExists = file.exists();
+            System.out.println(file.exists());
+            if (fileExists)
+                this.files.add(file);
         }
     }
 
@@ -33,7 +43,7 @@ public class FileParser {
     private List<String> getLinesFromFiles () {
         List fileLines = new ArrayList<String>();
 
-        for (File file : files) {
+        for (File file : this.files) {
             try {
                 fileLines.addAll(FileUtils.readLines(file));
             } catch (IOException e) {
