@@ -1,5 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.cache;
 
+import cr.ac.ucr.ecci.ci1323.memory.Bus;
+
 /**
  * Represents the position of a data cache, with its respective block and tag.
  *
