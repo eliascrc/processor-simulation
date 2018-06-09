@@ -1,5 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.cache;
 
+import cr.ac.ucr.ecci.ci1323.memory.DataBlock;
+
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -19,14 +21,6 @@ public class DataCachePosition {
         this.dataBlock = dataBlock;
         this.cachePositionState = cachePositionState;
         this.cachePositionLock = new ReentrantLock();
-    }
-
-    public int[] getWords() {
-        return words;
-    }
-
-    public void setWords(int[] words) {
-        this.words = words;
     }
 
     public int getTag() {
@@ -51,5 +45,13 @@ public class DataCachePosition {
 
     public void setCachePositionLock(ReentrantLock cachePositionLock) {
         this.cachePositionLock = cachePositionLock;
+    }
+
+    public CachePositionState getCachePositionState() {
+        return cachePositionState;
+    }
+
+    public void setCachePositionState(CachePositionState cachePositionState) {
+        this.cachePositionState = cachePositionState;
     }
 }

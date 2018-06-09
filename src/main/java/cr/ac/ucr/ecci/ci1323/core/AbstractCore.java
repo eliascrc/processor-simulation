@@ -12,12 +12,14 @@ abstract class AbstractCore extends Thread {
     ContextQueue contextQueue;
     int maxQuantum;
     int currentQuantum;
+    int[] registers;
 
     AbstractCore (int maxQuantum, Context startingContext, ContextQueue contextQueue) {
         this.maxQuantum = maxQuantum;
         this.contextQueue = contextQueue;
         this.currentContext = startingContext;
         this.currentQuantum = 0;
+        this.registers = new int[32];
     }
 
 }
