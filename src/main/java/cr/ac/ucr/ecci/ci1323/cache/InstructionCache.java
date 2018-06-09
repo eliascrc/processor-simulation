@@ -1,5 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.cache;
 
+import cr.ac.ucr.ecci.ci1323.memory.Bus;
+
 /**
  * Instruction cache used by both cores, which contains its positions and instruction bus for communication
  * with the main memory.

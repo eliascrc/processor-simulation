@@ -1,5 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.cache;
 
+import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
+
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
