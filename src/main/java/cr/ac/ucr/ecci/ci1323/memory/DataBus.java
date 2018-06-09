@@ -10,6 +10,7 @@ public class DataBus extends Bus {
     DataBlock dataMemory[];
 
     DataBus(DataCache coreOneCache, DataCache coreZeroCache, DataBlock[] dataMemory) {
+        super();
         this.coreZeroCache = coreZeroCache;
         this.coreOneCache = coreOneCache;
         this.dataMemory = dataMemory;
