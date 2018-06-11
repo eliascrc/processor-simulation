@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class Bus {
 
-    private Lock busLock;
+    private ReentrantLock busLock;
 
     Bus() {
         this.busLock = new ReentrantLock();
