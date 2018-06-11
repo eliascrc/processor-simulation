@@ -51,7 +51,7 @@ public class Context {
         for (int register : this.registers) {
             System.out.print(register + ", ");
         }
-        System.out.println("} , Tics = " + this.executionTics);
+        System.out.println("} , Tics = " + this.executionTics + ", #Context = " + this.contextNumber);
     }
 
     //----------------------------------------------------------------------------------------

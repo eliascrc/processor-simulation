@@ -39,6 +39,7 @@ public class SimulationController {
         this.parseContextFile();
 
         Scanner scanner = new Scanner(System.in);
+        System.out.print("Ingrese el Quantum maximo: ");
         int maxQuantum = scanner.nextInt();
 
         this.contextQueue.tryLock();
