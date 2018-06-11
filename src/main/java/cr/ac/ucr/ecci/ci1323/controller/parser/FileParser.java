@@ -1,7 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.controller.parser;
 
-import cr.ac.ucr.ecci.ci1323.control.context.Context;
-import cr.ac.ucr.ecci.ci1323.control.context.ContextQueue;
+import cr.ac.ucr.ecci.ci1323.context.Context;
+import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;

@@ -5,14 +5,12 @@ import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
 
 public class DataBus extends Bus {
 
-    DataCache coreZeroCache;
-    DataCache coreOneCache;
-    DataBlock dataMemory[];
+    private DataCache coreZeroCache;
+    private DataCache coreOneCache;
+    private DataBlock dataMemory[];
 
-    DataBus(DataCache coreOneCache, DataCache coreZeroCache, DataBlock[] dataMemory) {
+    public DataBus(DataBlock[] dataMemory) {
         super();
-        this.coreZeroCache = coreZeroCache;
-        this.coreOneCache = coreOneCache;
         this.dataMemory = dataMemory;
     }
 
@@ -30,4 +28,15 @@ public class DataBus extends Bus {
         return this.dataMemory[index];
     }
 
+    public void setCoreZeroCache(DataCache coreZeroCache) {
+        this.coreZeroCache = coreZeroCache;
+    }
+
+    public void setCoreOneCache(DataCache coreOneCache) {
+        this.coreOneCache = coreOneCache;
+    }
+
+    public DataBlock[] getDataMemory() {
+        return dataMemory;
+    }
 }
