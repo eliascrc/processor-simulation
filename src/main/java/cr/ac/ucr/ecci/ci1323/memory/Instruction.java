@@ -1,5 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.memory;
 
+import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
+
 public class Instruction {
 
     private int[] instructionFields;
@@ -13,7 +15,7 @@ public class Instruction {
     }
 
     public int getOperationCode() {
-        return this.instructionFields[0];
+        return this.instructionFields[SimulationConstants.OPCODE_FIELD_NUMBER];
     }
 
     public int[] getInstructionFields() {

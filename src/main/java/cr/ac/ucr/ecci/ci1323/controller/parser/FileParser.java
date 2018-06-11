@@ -1,5 +1,6 @@
 package cr.ac.ucr.ecci.ci1323.controller.parser;
 
+import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 import cr.ac.ucr.ecci.ci1323.context.Context;
 import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
@@ -16,10 +17,9 @@ import java.util.List;
 
 public class FileParser {
 
-    List<File> files;
-    ContextQueue contextQueue;
-    InstructionBus instructionBus;
-    private static final int INSTRUCTIONS_START = 16 * 24;
+    private List<File> files;
+    private ContextQueue contextQueue;
+    private InstructionBus instructionBus;
 
     public FileParser(ContextQueue contextQueue, InstructionBus instructionBus) {
         this.contextQueue = contextQueue;
@@ -37,11 +37,12 @@ public class FileParser {
         }
     }
 
+    //(int) Math.ceil((double) instructions.size() / 4)
     public void prepareSimulation() {
         List<String> instructions = this.readFiles();
 
-        Instruction[] instructionBlockArray = new Instruction[4];
-        InstructionBlock[] instructionMemory = new InstructionBlock[(int) Math.ceil((double) instructions.size() / 4)];
+        Instruction[] instructionBlockArray = new Instruction[SimulationConstants.TOTAL_INSTRUCTION_FIELDS];
+        InstructionBlock[] instructionMemory = this.instructionBus.getInstructionMemory();
         int instructionMemoryIndex = 0;
         int instructionBlockIndex = 0;
         for (String instructionString : instructions) {
@@ -65,7 +66,7 @@ public class FileParser {
     private List<String> readFiles() {
         List<String> lines = new LinkedList<String>();
 
-        int programCounterIndex = INSTRUCTIONS_START;
+        int programCounterIndex = SimulationConstants.INSTRUCTIONS_START;
         int contextNumber = 0;
         for (File file: files) {
             Context context = new Context(programCounterIndex, contextNumber);
