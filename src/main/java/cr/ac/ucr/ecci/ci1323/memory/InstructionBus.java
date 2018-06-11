@@ -2,10 +2,11 @@ package cr.ac.ucr.ecci.ci1323.memory;
 
 public class InstructionBus extends Bus {
 
-    InstructionBlock[] instructionMemory;
+    private InstructionBlock[] instructionMemory;
 
-    public InstructionBus() {
+    public InstructionBus(InstructionBlock[] instructionMemory) {
         super();
+        this.instructionMemory = instructionMemory;
     }
 
     public InstructionBlock getInstructionBlock(int index) {
@@ -18,6 +19,10 @@ public class InstructionBus extends Bus {
 
     public void setInstructionMemory(InstructionBlock[] instructionMemory) {
         this.instructionMemory = instructionMemory;
+    }
+
+    public InstructionBlock[] getInstructionMemory() {
+        return this.instructionMemory;
     }
 
     public void printInstructionMemory() {

@@ -1,5 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.context;
 
+import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
+
 /**
  * Model for the context of a Thread within the processor.
  * It contains the program counter, register and execution tics.
@@ -30,8 +32,8 @@ public class Context {
      */
     public Context(int programCounter) {
         this.programCounter = programCounter;
-        this.registers = new int[32];
-        this.executionTics = 0;
+        this.registers = new int[SimulationConstants.TOTAL_REGISTERS];
+        this.executionTics = SimulationConstants.INITIAL_TICKS;
     }
 
     /**
