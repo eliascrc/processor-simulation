@@ -44,14 +44,14 @@ public class FileParser {
         InstructionBlock[] instructionMemory = this.instructionBus.getInstructionMemory();
         int instructionMemoryIndex = 0;
         int instructionBlockIndex = 0;
-        int neededInstructionBlocks = (int) Math.ceil((double) instructions.size() / 4);
+        int neededInstructionBlocks = (int) Math.ceil((double) instructions.size() / SimulationConstants.INSTRUCTIONS_PER_BLOCK);
         for (String instructionString : instructions) {
             instructionBlockArray[instructionBlockIndex % 4] = this.parseInstruction(instructionString);
             instructionBlockIndex++;
-            if(instructionBlockIndex % 4 == 0) {
+            if(instructionBlockIndex % SimulationConstants.INSTRUCTIONS_PER_BLOCK == 0) {
                 InstructionBlock instructionBlock = new InstructionBlock(instructionBlockArray);
                 instructionMemory[instructionMemoryIndex] = instructionBlock;
-                instructionBlockArray = new Instruction[4];
+                instructionBlockArray = new Instruction[SimulationConstants.TOTAL_INSTRUCTION_FIELDS];
                 instructionMemoryIndex++;
             }
         }

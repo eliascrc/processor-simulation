@@ -10,5 +10,6 @@ public class SimulationConstants {
     public static final int TOTAL_INSTRUCTION_FIELDS = 4;
     public static final int OPCODE_FIELD_NUMBER = 0;
     public static final int INITIAL_QUANTUM = 0;
+    public static final int INSTRUCTIONS_PER_BLOCK = 4;
 
 }
