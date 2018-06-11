@@ -15,4 +15,12 @@ public class Instruction {
     public int getOperationCode() {
         return this.instructionFields[0];
     }
+
+    public int[] getInstructionFields() {
+        return this.instructionFields;
+    }
+
+    public String toString() {
+        return instructionFields[0] + "\t" + instructionFields[1]+ "\t" + instructionFields[2]+ "\t" + instructionFields[3];
+    }
 }
