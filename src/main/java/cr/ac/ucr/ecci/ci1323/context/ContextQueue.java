@@ -1,6 +1,6 @@
 package cr.ac.ucr.ecci.ci1323.context;
 
-import cr.ac.ucr.ecci.ci1323.support.ContextQueueLockException;
+import cr.ac.ucr.ecci.ci1323.exceptions.ContextQueueLockException;
 
 import java.util.LinkedList;
 import java.util.Queue;

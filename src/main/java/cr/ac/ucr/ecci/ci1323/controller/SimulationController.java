@@ -12,6 +12,7 @@ import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
 
 import java.util.ArrayList;
+import java.util.Scanner;
 
 public class SimulationController {
 
@@ -37,9 +38,12 @@ public class SimulationController {
     public void runSimulation() {
         this.parseContextFile();
 
+        Scanner scanner = new Scanner(System.in);
+        int maxQuantum = scanner.nextInt();
+
         this.contextQueue.tryLock();
-        this.coreZero = new CoreZero(5, this.contextQueue.getNextContext(), this);
-        this.coreOne = new CoreOne(5, this.contextQueue.getNextContext(), this);
+        this.coreZero = new CoreZero(maxQuantum, this.contextQueue.getNextContext(), this);
+        this.coreOne = new CoreOne(maxQuantum, this.contextQueue.getNextContext(), this);
         this.contextQueue.unlock();
 
         this.dataBus.setCoreZeroCache(this.coreZero.getDataCache());

@@ -6,7 +6,7 @@ import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
-import cr.ac.ucr.ecci.ci1323.support.InvalidInstructionException;
+import cr.ac.ucr.ecci.ci1323.exceptions.InvalidInstructionException;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
