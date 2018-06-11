@@ -21,12 +21,6 @@ public class FileParser {
     InstructionBus instructionBus;
     private static final int INSTRUCTIONS_START = 16 * 24;
 
-    public static void main(String[] args) {
-        InstructionBus instructionBus = new InstructionBus();
-        new FileParser(new ContextQueue(), instructionBus).prepareSimulation();
-        instructionBus.printInstructionMemory();
-    }
-
     public FileParser(ContextQueue contextQueue, InstructionBus instructionBus) {
         this.contextQueue = contextQueue;
         this.instructionBus = instructionBus;
@@ -65,7 +59,7 @@ public class FileParser {
             instructionMemory[instructionMemoryIndex] = new InstructionBlock(instructionBlockArray);
         }
 
-        instructionBus.setInstructionMemory(instructionMemory);
+        this.instructionBus.setInstructionMemory(instructionMemory);
     }
 
     private List<String> readFiles() {
