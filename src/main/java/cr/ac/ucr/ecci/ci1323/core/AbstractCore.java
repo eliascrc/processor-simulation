@@ -2,6 +2,7 @@ package cr.ac.ucr.ecci.ci1323.core;
 
 import cr.ac.ucr.ecci.ci1323.cache.DataCache;
 import cr.ac.ucr.ecci.ci1323.cache.InstructionCache;
+import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 import cr.ac.ucr.ecci.ci1323.context.Context;
 import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
@@ -91,7 +92,7 @@ abstract class AbstractCore extends Thread {
     public int calculateDataBlockNumber(Instruction instruction) {
         int sourceRegister = this.currentContext.getRegisters()[instruction.getInstructionFields()[1]];
         int immediate = instruction.getInstructionFields()[3];
-        int blockNumber = (sourceRegister + immediate) / 16;
+        int blockNumber = (sourceRegister + immediate) / SimulationConstants.BLOCK_SIZE;
         return blockNumber;
     }
 
@@ -104,7 +105,7 @@ abstract class AbstractCore extends Thread {
     public int calculateDataOffset(Instruction instruction) {
         int sourceRegister = this.currentContext.getRegisters()[instruction.getInstructionFields()[1]];
         int immediate = instruction.getInstructionFields()[3];
-        int offset = ((sourceRegister + immediate) % 16) / 4;
+        int offset = ((sourceRegister + immediate) % SimulationConstants.BLOCK_SIZE) / SimulationConstants.TOTAL_DATA_BLOCK_WORDS;
         return offset;
     }
 
@@ -117,9 +118,9 @@ abstract class AbstractCore extends Thread {
      */
     public int calculateCachePosition(int blockNumber, int coreNumber) {
         if (coreNumber == 0) {
-            return blockNumber % 8;
+            return blockNumber % SimulationConstants.TOTAL_CORE_CERO_CACHE_POSITIONS;
         }
-        return blockNumber % 4;
+        return blockNumber % SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS;
     }
 
     /**
@@ -131,9 +132,9 @@ abstract class AbstractCore extends Thread {
      */
     public int calculateDataOtherCachePosition(int blockNumber, int coreNumber) {
         if (coreNumber == 0) {
-            return blockNumber % 4;
+            return blockNumber % SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS;
         }
-        return blockNumber % 8;
+        return blockNumber % SimulationConstants.TOTAL_CORE_CERO_CACHE_POSITIONS;
     }
 
     /**
@@ -142,7 +143,7 @@ abstract class AbstractCore extends Thread {
      * @return
      */
     public int calculateInstructionBlockNumber() {
-        return (int) Math.floor(this.currentContext.getProgramCounter() / 16);
+        return (int) Math.floor(this.currentContext.getProgramCounter() / SimulationConstants.BLOCK_SIZE);
     }
 
     /**
@@ -151,7 +152,7 @@ abstract class AbstractCore extends Thread {
      * @return
      */
     public int calculateInstructionOffset() {
-        return (this.currentContext.getProgramCounter() % 16) / 4;
+        return (this.currentContext.getProgramCounter() % SimulationConstants.BLOCK_SIZE) / SimulationConstants.INSTRUCTIONS_PER_BLOCK;
     }
 
     //----------------------------------------------------------------------------------------
