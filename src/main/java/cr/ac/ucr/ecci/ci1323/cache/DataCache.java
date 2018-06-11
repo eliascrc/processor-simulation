@@ -12,8 +12,17 @@ public class DataCache {
     private DataCachePosition[] dataCachePositions;
     private Bus dataBus;
 
-    public DataCache(DataCachePosition[] dataCachePositions, Bus dataBus) {
-        this.dataCachePositions = dataCachePositions;
+    /**
+     * Class constructor, initializes the cache with the respective amount of positions and sets their states
+     * to invalid.
+     * @param dataBus
+     * @param cacheSize
+     */
+    public DataCache(Bus dataBus, int cacheSize) {
+        this.dataCachePositions = new DataCachePosition[cacheSize];
+        for (int cachePosition = 0; cachePosition < this.dataCachePositions.length; cachePosition++) {
+            this.dataCachePositions[cachePosition].setCachePositionState(CachePositionState.INVALID);
+        }
         this.dataBus = dataBus;
     }
 

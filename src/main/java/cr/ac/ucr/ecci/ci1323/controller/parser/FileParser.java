@@ -1,44 +1,89 @@
 package cr.ac.ucr.ecci.ci1323.controller.parser;
 
+import cr.ac.ucr.ecci.ci1323.control.context.Context;
+import cr.ac.ucr.ecci.ci1323.control.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
+import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
 import cr.ac.ucr.ecci.ci1323.support.InvalidInstructionException;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public class FileParser {
 
     List<File> files;
+    ContextQueue contextQueue;
+    InstructionBus instructionBus;
+    private static final int INSTRUCTIONS_START = 16 * 24;
 
-    public FileParser() {
+    public FileParser(ContextQueue contextQueue, InstructionBus instructionBus) {
+        this.contextQueue = contextQueue;
+        this.instructionBus = instructionBus;
         boolean fileExists = true;
-
+        this.files = new ArrayList<File>();
         for (int i = 0; fileExists; i++) {
-            File file = new File(i + ".txt");
-        }
-    }
+            ClassLoader classLoader = getClass().getClassLoader();
+            fileExists = (classLoader.getResource(i + ".txt") != null);
 
-    public InstructionBlock[] parseFiles() {
-        for (String fileLine : this.getLinesFromFiles()) {
-            System.out.println(fileLine);
-        }
-
-        return null;
-    }
-
-    private List<String> getLinesFromFiles () {
-        List fileLines = new ArrayList<String>();
-
-        for (File file : files) {
-            try {
-                fileLines.addAll(FileUtils.readLines(file));
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (fileExists) {
+                File file = new File(classLoader.getResource(i + ".txt").getFile());
+                this.files.add(file);
             }
+        }
+    }
+
+    public void prepareSimulation() {
+        List<String> instructions = this.readFiles();
+
+        Instruction[] instructionBlockArray = new Instruction[4];
+        InstructionBlock[] instructionMemory = new InstructionBlock[(int) Math.ceil((double) instructions.size() / 4)];
+        int instructionMemoryIndex = 0;
+        int instructionBlockIndex = 0;
+        for (String instructionString : instructions) {
+            instructionBlockArray[instructionBlockIndex % 4] = this.parseInstruction(instructionString);
+            instructionBlockIndex++;
+            if(instructionBlockIndex % 4 == 0) {
+                InstructionBlock instructionBlock = new InstructionBlock(instructionBlockArray);
+                instructionMemory[instructionMemoryIndex] = instructionBlock;
+                instructionBlockArray = new Instruction[4];
+                instructionMemoryIndex++;
+            }
+        }
+
+        if(instructionMemoryIndex == instructionMemory.length - 1) {
+            instructionMemory[instructionMemoryIndex] = new InstructionBlock(instructionBlockArray);
+        }
+
+        this.instructionBus.setInstructionMemory(instructionMemory);
+    }
+
+    private List<String> readFiles() {
+        List<String> lines = new LinkedList<String>();
+
+        int programCounterIndex = INSTRUCTIONS_START;
+        for (File file: files) {
+            Context context = new Context(programCounterIndex);
+            List<String> newLines = getLinesFromFile(file);
+            lines.addAll(newLines);
+            programCounterIndex += 4 * newLines.size();
+            this.contextQueue.pushContext(context);
+        }
+
+        return lines;
+    }
+
+    private List<String> getLinesFromFile(File file) {
+        List<String> fileLines = new LinkedList<String>();
+
+        try {
+            fileLines = FileUtils.readLines(file);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         return fileLines;
@@ -57,7 +102,6 @@ public class FileParser {
         if (instructionFields.length != 4)
             throw new InvalidInstructionException("Instruction from file has " + instructionFields.length + " fields");
 
-        Instruction instruction = new Instruction(instructionFields);
-        return instruction;
+        return new Instruction(instructionFields);
     }
 }
