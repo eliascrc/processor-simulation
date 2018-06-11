@@ -1,5 +1,8 @@
 package cr.ac.ucr.ecci.ci1323.commons;
 
+/**
+ * 
+ */
 public class SimulationConstants {
 
     public static final int TOTAL_REGISTERS = 32;
