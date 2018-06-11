@@ -37,7 +37,6 @@ public class FileParser {
         }
     }
 
-    //(int) Math.ceil((double) instructions.size() / 4)
     public void prepareSimulation() {
         List<String> instructions = this.readFiles();
 
@@ -45,6 +44,7 @@ public class FileParser {
         InstructionBlock[] instructionMemory = this.instructionBus.getInstructionMemory();
         int instructionMemoryIndex = 0;
         int instructionBlockIndex = 0;
+        int neededInstructionBlocks = (int) Math.ceil((double) instructions.size() / 4);
         for (String instructionString : instructions) {
             instructionBlockArray[instructionBlockIndex % 4] = this.parseInstruction(instructionString);
             instructionBlockIndex++;
@@ -56,7 +56,7 @@ public class FileParser {
             }
         }
 
-        if(instructionMemoryIndex == instructionMemory.length - 1) {
+        if(instructionMemoryIndex == neededInstructionBlocks - 1) {
             instructionMemory[instructionMemoryIndex] = new InstructionBlock(instructionBlockArray);
         }
 
@@ -67,12 +67,14 @@ public class FileParser {
         List<String> lines = new LinkedList<String>();
 
         int programCounterIndex = SimulationConstants.INSTRUCTIONS_START;
+        int contextNumber = 0;
         for (File file: files) {
-            Context context = new Context(programCounterIndex);
+            Context context = new Context(programCounterIndex, contextNumber);
             List<String> newLines = getLinesFromFile(file);
             lines.addAll(newLines);
             programCounterIndex += 4 * newLines.size();
             this.contextQueue.pushContext(context);
+            contextNumber++;
         }
 
         return lines;

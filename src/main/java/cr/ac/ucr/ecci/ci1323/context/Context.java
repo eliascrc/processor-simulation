@@ -27,13 +27,19 @@ public class Context {
     private volatile int executionTics;
 
     /**
+     * The number that identifies the context
+     */
+    private volatile int contextNumber;
+
+    /**
      * Constructor that sets the PC, initializes the registers and sets the tics to 0.
      * @param programCounter the context's PC.
      */
-    public Context(int programCounter) {
+    public Context(int programCounter, int contextNumber) {
         this.programCounter = programCounter;
         this.registers = new int[SimulationConstants.TOTAL_REGISTERS];
         this.executionTics = SimulationConstants.INITIAL_TICKS;
+        this.contextNumber = contextNumber;
     }
 
     /**
