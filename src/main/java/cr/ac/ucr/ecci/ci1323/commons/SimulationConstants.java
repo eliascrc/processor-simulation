@@ -1,7 +1,9 @@
 package cr.ac.ucr.ecci.ci1323.commons;
 
 /**
- * 
+ * Constants used in the simulation.
+ *
+ * @author Josue Leon Sarkis, Elias Calderon, Daniel Montes de Oca
  */
 public class SimulationConstants {
 
