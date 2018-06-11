@@ -66,12 +66,14 @@ public class FileParser {
         List<String> lines = new LinkedList<String>();
 
         int programCounterIndex = INSTRUCTIONS_START;
+        int contextNumber = 0;
         for (File file: files) {
-            Context context = new Context(programCounterIndex);
+            Context context = new Context(programCounterIndex, contextNumber);
             List<String> newLines = getLinesFromFile(file);
             lines.addAll(newLines);
             programCounterIndex += 4 * newLines.size();
             this.contextQueue.pushContext(context);
+            contextNumber++;
         }
 
         return lines;
