@@ -2,6 +2,7 @@ package cr.ac.ucr.ecci.ci1323.core;
 
 import cr.ac.ucr.ecci.ci1323.cache.DataCache;
 import cr.ac.ucr.ecci.ci1323.cache.InstructionCache;
+import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 import cr.ac.ucr.ecci.ci1323.context.Context;
 import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
@@ -26,7 +27,7 @@ abstract class AbstractCore extends Thread {
         this.maxQuantum = maxQuantum;
         this.simulationController = simulationController;
         this.currentContext = startingContext;
-        this.currentQuantum = 0;
+        this.currentQuantum = SimulationConstants.INITIAL_QUANTUM;
     }
 
     protected void executeDADDI (Instruction instruction) {
