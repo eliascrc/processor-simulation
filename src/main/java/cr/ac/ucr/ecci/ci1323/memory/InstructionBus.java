@@ -21,6 +21,10 @@ public class InstructionBus extends Bus {
         this.instructionMemory = instructionMemory;
     }
 
+    public Instruction getMemoryInstructionBlockInstruction(int blockNumber, int offset) {
+        return this.getInstructionBlock(blockNumber).getInstruction(offset);
+    }
+
     public InstructionBlock[] getInstructionMemory() {
         return this.instructionMemory;
     }

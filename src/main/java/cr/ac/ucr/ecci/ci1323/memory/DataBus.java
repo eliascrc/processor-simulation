@@ -15,17 +15,21 @@ public class DataBus extends Bus {
     }
 
     public DataCachePosition getCachePosition(int coreNum, int position) {
-       if (coreNum == 0) {
-           return this.coreZeroCache.getDataCachePositions()[position];
-       } else if (coreNum == 1) {
-           return this.coreOneCache.getDataCachePositions()[position];
-       } else {
-           throw new IllegalArgumentException("Invalid core number: " + coreNum);
-       }
+        if (coreNum == 0) {
+            return this.coreZeroCache.getDataCachePositions()[position];
+        } else if (coreNum == 1) {
+            return this.coreOneCache.getDataCachePositions()[position];
+        } else {
+            throw new IllegalArgumentException("Invalid core number: " + coreNum);
+        }
     }
 
     public DataBlock getMemoryBlock(int index) {
         return this.dataMemory[index];
+    }
+
+    public int getMemoryBlockData(int blockNumber, int offset) {
+        return this.getMemoryBlock(blockNumber).getWord(offset);
     }
 
     public void setCoreZeroCache(DataCache coreZeroCache) {
@@ -39,4 +43,5 @@ public class DataBus extends Bus {
     public DataBlock[] getDataMemory() {
         return dataMemory;
     }
+
 }
