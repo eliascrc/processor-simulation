@@ -30,4 +30,8 @@ public class DataBus extends Bus {
         return this.dataMemory[index];
     }
 
+    public int getMemoryBlockData(int blockNumber, int offset) {
+        return this.getMemoryBlock(blockNumber).getWord(offset);
+    }
+
 }

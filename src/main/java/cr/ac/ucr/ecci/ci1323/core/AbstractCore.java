@@ -82,18 +82,6 @@ abstract class AbstractCore extends Thread {
         this.setPC(this.getRegisters()[instruction.getField(1)]);
     }
 
-    private int[] getRegisters() {
-        return this.currentContext.getRegisters();
-    }
-
-    private int getPC() {
-        return this.currentContext.getProgramCounter();
-    }
-
-    private void setPC(int newPC) {
-        this.currentContext.setProgramCounter(newPC);
-    }
-
     /**
      * Calculates the data block number of a load or store instruction.
      * @param instruction
@@ -158,6 +146,19 @@ abstract class AbstractCore extends Thread {
      */
     public int calculateInstructionOffset() {
         return (this.currentContext.getProgramCounter() % 16) / 4;
+    }
+
+
+    private int[] getRegisters() {
+        return this.currentContext.getRegisters();
+    }
+
+    private int getPC() {
+        return this.currentContext.getProgramCounter();
+    }
+
+    private void setPC(int newPC) {
+        this.currentContext.setProgramCounter(newPC);
     }
 
 }
