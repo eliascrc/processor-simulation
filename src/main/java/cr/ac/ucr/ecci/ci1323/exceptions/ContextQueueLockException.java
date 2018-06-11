@@ -1,25 +1,25 @@
-package cr.ac.ucr.ecci.ci1323.support;
+package cr.ac.ucr.ecci.ci1323.exceptions;
 
 /**
- * A runtime exception that is thrown when an instruction doesn´t meet the standard structure
+ * A runtime exception that is thrown when a core tries to handle the context queue by miss using the lock
  *
- * @author Daniel Montes de Oca
+ * @author Elias Calderon
  */
-public class InvalidInstructionException extends RuntimeException {
+public class ContextQueueLockException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
     /**
      * Default constructor
      */
-    public InvalidInstructionException() {
+    public ContextQueueLockException() {
     }
 
     /**
      * Creates a new exception with the specified message
      * @param message the message to display
      */
-    public InvalidInstructionException(String message) {
+    public ContextQueueLockException(String message) {
         super(message);
     }
 
@@ -27,7 +27,7 @@ public class InvalidInstructionException extends RuntimeException {
      * Creates a new exception with the specified wrapped exception
      * @param cause the cause of the exception
      */
-    public InvalidInstructionException(Throwable cause) {
+    public ContextQueueLockException(Throwable cause) {
         super(cause);
     }
 
@@ -36,7 +36,8 @@ public class InvalidInstructionException extends RuntimeException {
      * @param message the message to display
      * @param cause the cause of the exception
      */
-    public InvalidInstructionException(String message, Throwable cause) {
+    public ContextQueueLockException(String message, Throwable cause) {
         super(message, cause);
     }
+
 }
