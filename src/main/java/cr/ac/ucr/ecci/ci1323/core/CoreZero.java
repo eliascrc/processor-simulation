@@ -1,8 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.core;
 
-import cr.ac.ucr.ecci.ci1323.control.SimulationController;
-import cr.ac.ucr.ecci.ci1323.control.context.Context;
-import cr.ac.ucr.ecci.ci1323.control.context.ContextQueue;
+import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
+import cr.ac.ucr.ecci.ci1323.context.Context;
 
 public class CoreZero extends AbstractCore {
 

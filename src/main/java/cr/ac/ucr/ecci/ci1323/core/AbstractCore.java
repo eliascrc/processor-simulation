@@ -2,8 +2,8 @@ package cr.ac.ucr.ecci.ci1323.core;
 
 import cr.ac.ucr.ecci.ci1323.cache.DataCache;
 import cr.ac.ucr.ecci.ci1323.cache.InstructionCache;
-import cr.ac.ucr.ecci.ci1323.control.context.Context;
-import cr.ac.ucr.ecci.ci1323.control.SimulationController;
+import cr.ac.ucr.ecci.ci1323.context.Context;
+import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 
 /**
@@ -21,7 +21,7 @@ abstract class AbstractCore extends Thread {
     protected int maxQuantum;
     protected int currentQuantum;
 
-    protected AbstractCore (int maxQuantum, Context startingContext, SimulationController simulationController) {
+    protected AbstractCore(int maxQuantum, Context startingContext, SimulationController simulationController) {
 
         this.maxQuantum = maxQuantum;
         this.simulationController = simulationController;
@@ -29,27 +29,27 @@ abstract class AbstractCore extends Thread {
         this.currentQuantum = 0;
     }
 
-    protected void executeDADDI (Instruction instruction) {
+    protected void executeDADDI(Instruction instruction) {
         this.getRegisters()[instruction.getField(2)] = this.getRegisters()[instruction.getField(1)]
                 + instruction.getField(3);
     }
 
-    protected void executeDADD (Instruction instruction) {
+    protected void executeDADD(Instruction instruction) {
         this.getRegisters()[instruction.getField(3)] = this.getRegisters()[instruction.getField(1)]
                 + this.getRegisters()[instruction.getField(2)];
     }
 
-    protected void executeDSUB (Instruction instruction) {
+    protected void executeDSUB(Instruction instruction) {
         this.getRegisters()[instruction.getField(3)] = this.getRegisters()[instruction.getField(1)]
                 - this.getRegisters()[instruction.getField(2)];
     }
 
-    protected void executeDMUL (Instruction instruction) {
+    protected void executeDMUL(Instruction instruction) {
         this.getRegisters()[instruction.getField(3)] = this.getRegisters()[instruction.getField(1)]
                 * this.getRegisters()[instruction.getField(2)];
     }
 
-    protected void executeDDIV (Instruction instruction) {
+    protected void executeDDIV(Instruction instruction) {
         try {
             this.getRegisters()[instruction.getField(3)] = this.getRegisters()[instruction.getField(1)]
                     / this.getRegisters()[instruction.getField(2)];
@@ -59,31 +59,32 @@ abstract class AbstractCore extends Thread {
         }
     }
 
-    protected void executeBEQZ (Instruction instruction) {
+    protected void executeBEQZ(Instruction instruction) {
         if (this.getRegisters()[instruction.getField(1)] == 0) {
             int newPC = this.getPC() + 4 * instruction.getField(3);
             this.setPC(newPC);
         }
     }
 
-    protected void executeBNEZ (Instruction instruction) {
+    protected void executeBNEZ(Instruction instruction) {
         if (this.getRegisters()[instruction.getField(1)] != 0) {
             int newPC = this.getPC() + 4 * instruction.getField(3);
             this.setPC(newPC);
         }
     }
 
-    protected void executeJAL (Instruction instruction) {
+    protected void executeJAL(Instruction instruction) {
         this.getRegisters()[31] = this.getPC();
         this.setPC(instruction.getField(3));
     }
 
-    protected void executeJR (Instruction instruction) {
+    protected void executeJR(Instruction instruction) {
         this.setPC(this.getRegisters()[instruction.getField(1)]);
     }
 
     /**
      * Calculates the data block number of a load or store instruction.
+     *
      * @param instruction
      * @return
      */
@@ -96,6 +97,7 @@ abstract class AbstractCore extends Thread {
 
     /**
      * Calculates the offset of a cache position block for a load or store instruction.
+     *
      * @param instruction
      * @return
      */
@@ -108,12 +110,13 @@ abstract class AbstractCore extends Thread {
 
     /**
      * Calculates the data cache position for a data block.
+     *
      * @param blockNumber
      * @param coreNumber
      * @return
      */
     public int calculateCachePosition(int blockNumber, int coreNumber) {
-        if(coreNumber == 0) {
+        if (coreNumber == 0) {
             return blockNumber % 8;
         }
         return blockNumber % 4;
@@ -121,12 +124,13 @@ abstract class AbstractCore extends Thread {
 
     /**
      * Calculates the data cache position for a data block in the other core cache.
+     *
      * @param blockNumber
      * @param coreNumber
      * @return
      */
     public int calculateDataOtherCachePosition(int blockNumber, int coreNumber) {
-        if(coreNumber == 0) {
+        if (coreNumber == 0) {
             return blockNumber % 4;
         }
         return blockNumber % 8;
@@ -134,20 +138,25 @@ abstract class AbstractCore extends Thread {
 
     /**
      * Calculates the block number of an instruction.
+     *
      * @return
      */
     public int calculateInstructionBlockNumber() {
-        return (int)Math.floor(this.currentContext.getProgramCounter() / 16);
+        return (int) Math.floor(this.currentContext.getProgramCounter() / 16);
     }
 
     /**
      * Calculates the offset for an instruction block.
+     *
      * @return
      */
     public int calculateInstructionOffset() {
         return (this.currentContext.getProgramCounter() % 16) / 4;
     }
 
+    //----------------------------------------------------------------------------------------
+    // Setters and Getters
+    //----------------------------------------------------------------------------------------
 
     private int[] getRegisters() {
         return this.currentContext.getRegisters();
@@ -159,6 +168,10 @@ abstract class AbstractCore extends Thread {
 
     private void setPC(int newPC) {
         this.currentContext.setProgramCounter(newPC);
+    }
+
+    public DataCache getDataCache() {
+        return dataCache;
     }
 
 }

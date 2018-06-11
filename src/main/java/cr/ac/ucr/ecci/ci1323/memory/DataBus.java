@@ -5,25 +5,23 @@ import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
 
 public class DataBus extends Bus {
 
-    DataCache coreZeroCache;
-    DataCache coreOneCache;
-    DataBlock dataMemory[];
+    private DataCache coreZeroCache;
+    private DataCache coreOneCache;
+    private DataBlock dataMemory[];
 
-    DataBus(DataCache coreOneCache, DataCache coreZeroCache, DataBlock[] dataMemory) {
+    public DataBus(DataBlock[] dataMemory) {
         super();
-        this.coreZeroCache = coreZeroCache;
-        this.coreOneCache = coreOneCache;
         this.dataMemory = dataMemory;
     }
 
     public DataCachePosition getCachePosition(int coreNum, int position) {
-       if (coreNum == 0) {
-           return this.coreZeroCache.getDataCachePositions()[position];
-       } else if (coreNum == 1) {
-           return this.coreOneCache.getDataCachePositions()[position];
-       } else {
-           throw new IllegalArgumentException("Invalid core number: " + coreNum);
-       }
+        if (coreNum == 0) {
+            return this.coreZeroCache.getDataCachePositions()[position];
+        } else if (coreNum == 1) {
+            return this.coreOneCache.getDataCachePositions()[position];
+        } else {
+            throw new IllegalArgumentException("Invalid core number: " + coreNum);
+        }
     }
 
     public DataBlock getMemoryBlock(int index) {
@@ -32,6 +30,18 @@ public class DataBus extends Bus {
 
     public int getMemoryBlockData(int blockNumber, int offset) {
         return this.getMemoryBlock(blockNumber).getWord(offset);
+    }
+
+    public void setCoreZeroCache(DataCache coreZeroCache) {
+        this.coreZeroCache = coreZeroCache;
+    }
+
+    public void setCoreOneCache(DataCache coreOneCache) {
+        this.coreOneCache = coreOneCache;
+    }
+
+    public DataBlock[] getDataMemory() {
+        return dataMemory;
     }
 
 }

@@ -2,7 +2,7 @@ package cr.ac.ucr.ecci.ci1323.memory;
 
 public class InstructionBlock {
 
-    Instruction[] instructions;
+    private Instruction[] instructions;
 
     public InstructionBlock(Instruction[] instructions) {
         this.instructions = instructions;

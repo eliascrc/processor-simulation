@@ -1,7 +1,8 @@
-package cr.ac.ucr.ecci.ci1323.control.parser;
+package cr.ac.ucr.ecci.ci1323.controller.parser;
 
-import cr.ac.ucr.ecci.ci1323.control.context.Context;
-import cr.ac.ucr.ecci.ci1323.control.context.ContextQueue;
+import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
+import cr.ac.ucr.ecci.ci1323.context.Context;
+import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
@@ -16,10 +17,9 @@ import java.util.List;
 
 public class FileParser {
 
-    List<File> files;
-    ContextQueue contextQueue;
-    InstructionBus instructionBus;
-    private static final int INSTRUCTIONS_START = 16 * 24;
+    private List<File> files;
+    private ContextQueue contextQueue;
+    private InstructionBus instructionBus;
 
     public FileParser(ContextQueue contextQueue, InstructionBus instructionBus) {
         this.contextQueue = contextQueue;
@@ -40,10 +40,11 @@ public class FileParser {
     public void prepareSimulation() {
         List<String> instructions = this.readFiles();
 
-        Instruction[] instructionBlockArray = new Instruction[4];
-        InstructionBlock[] instructionMemory = new InstructionBlock[(int) Math.ceil((double) instructions.size() / 4)];
+        Instruction[] instructionBlockArray = new Instruction[SimulationConstants.TOTAL_INSTRUCTION_FIELDS];
+        InstructionBlock[] instructionMemory = this.instructionBus.getInstructionMemory();
         int instructionMemoryIndex = 0;
         int instructionBlockIndex = 0;
+        int neededInstructionBlocks = (int) Math.ceil((double) instructions.size() / 4);
         for (String instructionString : instructions) {
             instructionBlockArray[instructionBlockIndex % 4] = this.parseInstruction(instructionString);
             instructionBlockIndex++;
@@ -55,7 +56,7 @@ public class FileParser {
             }
         }
 
-        if(instructionMemoryIndex == instructionMemory.length - 1) {
+        if(instructionMemoryIndex == neededInstructionBlocks - 1) {
             instructionMemory[instructionMemoryIndex] = new InstructionBlock(instructionBlockArray);
         }
 
@@ -65,13 +66,15 @@ public class FileParser {
     private List<String> readFiles() {
         List<String> lines = new LinkedList<String>();
 
-        int programCounterIndex = INSTRUCTIONS_START;
+        int programCounterIndex = SimulationConstants.INSTRUCTIONS_START;
+        int contextNumber = 0;
         for (File file: files) {
-            Context context = new Context(programCounterIndex);
+            Context context = new Context(programCounterIndex, contextNumber);
             List<String> newLines = getLinesFromFile(file);
             lines.addAll(newLines);
             programCounterIndex += 4 * newLines.size();
             this.contextQueue.pushContext(context);
+            contextNumber++;
         }
 
         return lines;

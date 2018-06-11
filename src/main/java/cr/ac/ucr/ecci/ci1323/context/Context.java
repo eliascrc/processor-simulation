@@ -1,4 +1,6 @@
-package cr.ac.ucr.ecci.ci1323.control.context;
+package cr.ac.ucr.ecci.ci1323.context;
+
+import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 
 /**
  * Model for the context of a Thread within the processor.
@@ -11,27 +13,33 @@ public class Context {
     /**
      * The current program counter of the context.
      */
-    private int programCounter;
+    private volatile int programCounter;
 
     /**
      * The register values of the context.
      */
-    private int[] registers;
+    private volatile int[] registers;
 
     /**
      * The clock tics that the context has consumed.
      * It is used for statistics.
      */
-    private int executionTics;
+    private volatile int executionTics;
+
+    /**
+     * The number that identifies the context
+     */
+    private volatile int contextNumber;
 
     /**
      * Constructor that sets the PC, initializes the registers and sets the tics to 0.
      * @param programCounter the context's PC.
      */
-    public Context(int programCounter) {
+    public Context(int programCounter, int contextNumber) {
         this.programCounter = programCounter;
-        this.registers = new int[32];
-        this.executionTics = 0;
+        this.registers = new int[SimulationConstants.TOTAL_REGISTERS];
+        this.executionTics = SimulationConstants.INITIAL_TICKS;
+        this.contextNumber = contextNumber;
     }
 
     /**
@@ -47,9 +55,7 @@ public class Context {
     }
 
     //----------------------------------------------------------------------------------------
-    //
     // Setters and Getters
-    //
     //----------------------------------------------------------------------------------------
 
     public int getProgramCounter() {

@@ -4,7 +4,6 @@ public class DataBlock {
 
     private int[] words;
 
-
     DataBlock(int[] words) {
         this.words = words;
     }
