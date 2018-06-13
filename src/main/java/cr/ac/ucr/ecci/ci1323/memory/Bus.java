@@ -20,4 +20,14 @@ public abstract class Bus {
         return this.busLock.tryLock();
     }
 
+    /**
+     * Synchronized method for trying to unlock the bus
+     */
+    public synchronized void unlock() {
+        if (!this.busLock.isHeldByCurrentThread())
+            throw new TryLockException("The current thread cannot unlock the queue without holding the lock.");
+
+        this.busLock.unlock();
+    }
+
 }
