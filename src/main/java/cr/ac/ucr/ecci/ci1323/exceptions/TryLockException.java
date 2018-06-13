@@ -5,21 +5,21 @@ package cr.ac.ucr.ecci.ci1323.exceptions;
  *
  * @author Elias Calderon
  */
-public class ContextQueueLockException extends RuntimeException {
+public class TryLockException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
     /**
      * Default constructor
      */
-    public ContextQueueLockException() {
+    public TryLockException() {
     }
 
     /**
      * Creates a new exception with the specified message
      * @param message the message to display
      */
-    public ContextQueueLockException(String message) {
+    public TryLockException(String message) {
         super(message);
     }
 
@@ -27,7 +27,7 @@ public class ContextQueueLockException extends RuntimeException {
      * Creates a new exception with the specified wrapped exception
      * @param cause the cause of the exception
      */
-    public ContextQueueLockException(Throwable cause) {
+    public TryLockException(Throwable cause) {
         super(cause);
     }
 
@@ -36,7 +36,7 @@ public class ContextQueueLockException extends RuntimeException {
      * @param message the message to display
      * @param cause the cause of the exception
      */
-    public ContextQueueLockException(String message, Throwable cause) {
+    public TryLockException(String message, Throwable cause) {
         super(message, cause);
     }
 

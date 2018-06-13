@@ -1,5 +1,6 @@
 package cr.ac.ucr.ecci.ci1323.cache;
 
+import cr.ac.ucr.ecci.ci1323.exceptions.TryLockException;
 import cr.ac.ucr.ecci.ci1323.memory.DataBlock;
 
 import java.util.concurrent.locks.ReentrantLock;
@@ -21,6 +22,13 @@ public class DataCachePosition {
         this.dataBlock = dataBlock;
         this.cachePositionState = cachePositionState;
         this.cachePositionLock = new ReentrantLock();
+    }
+
+    public synchronized boolean tryLock() {
+        if (this.cachePositionLock.isHeldByCurrentThread())
+            throw new TryLockException("The current thread already holds the data cache position queue lock.");
+
+        return this.cachePositionLock.tryLock();
     }
 
     public int getTag() {
