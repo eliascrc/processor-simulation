@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class Bus {
 
-    private ReentrantLock busLock;
+    private volatile ReentrantLock busLock;
 
     Bus() {
         this.busLock = new ReentrantLock();
@@ -18,6 +18,16 @@ public abstract class Bus {
             throw new TryLockException("The current thread already holds the bus lock.");
 
         return this.busLock.tryLock();
+    }
+
+    /**
+     * Synchronized method for trying to unlock the bus
+     */
+    public synchronized void unlock() {
+        if (!this.busLock.isHeldByCurrentThread())
+            throw new TryLockException("The current thread cannot unlock the queue without holding the lock.");
+
+        this.busLock.unlock();
     }
 
 }

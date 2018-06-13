@@ -10,8 +10,8 @@ import cr.ac.ucr.ecci.ci1323.memory.Bus;
  */
 public class InstructionCache {
 
-    private InstructionCachePosition[] instructionCachePositions;
-    private Bus instructionBus;
+    private volatile InstructionCachePosition[] instructionCachePositions;
+    private volatile Bus instructionBus;
 
     public InstructionCache(InstructionCachePosition[] instructionCachePositions, Bus instructionBus) {
         this.instructionCachePositions = instructionCachePositions;
