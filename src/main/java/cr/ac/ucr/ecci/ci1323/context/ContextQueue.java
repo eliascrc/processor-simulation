@@ -1,6 +1,6 @@
 package cr.ac.ucr.ecci.ci1323.context;
 
-import cr.ac.ucr.ecci.ci1323.exceptions.ContextQueueLockException;
+import cr.ac.ucr.ecci.ci1323.exceptions.TryLockException;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -37,9 +37,9 @@ public class ContextQueue {
      */
     public synchronized boolean tryLock() {
         if (this.contextQueueLock.isHeldByCurrentThread())
-            throw new ContextQueueLockException("The current thread already holds the context queue lock.");
+            throw new TryLockException("The current thread already holds the context queue lock.");
 
-        return contextQueueLock.tryLock();
+        return this.contextQueueLock.tryLock();
     }
 
     /**
@@ -47,7 +47,7 @@ public class ContextQueue {
      */
     public synchronized void unlock() {
         if (!this.contextQueueLock.isHeldByCurrentThread())
-            throw new ContextQueueLockException("The current thread cannot unlock the queue without holding the lock.");
+            throw new TryLockException("The current thread cannot unlock the queue without holding the lock.");
 
         contextQueueLock.unlock();
     }
@@ -58,7 +58,7 @@ public class ContextQueue {
      */
     public synchronized Context getNextContext() {
         if (!this.contextQueueLock.isHeldByCurrentThread())
-            throw new ContextQueueLockException("The current thread tried to get a new context without locking the queue");
+            throw new TryLockException("The current thread tried to get a new context without locking the queue");
 
         return this.contextQueue.poll();
     }
