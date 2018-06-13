@@ -15,7 +15,7 @@ public abstract class Bus {
 
     protected synchronized boolean tryLock() {
         if(this.busLock.isHeldByCurrentThread())
-            throw new TryLockException();
+            throw new TryLockException("The current thread already holds the bus lock.");
 
         return this.busLock.tryLock();
     }
