@@ -31,6 +31,13 @@ public class DataCachePosition {
         return this.cachePositionLock.tryLock();
     }
 
+    public synchronized void unlock() {
+        if (!this.cachePositionLock.isHeldByCurrentThread())
+            throw new TryLockException("The current thread cannot unlock the data cache position without holding the lock.");
+
+        this.cachePositionLock.unlock();
+    }
+
     public int getTag() {
         return tag;
     }
