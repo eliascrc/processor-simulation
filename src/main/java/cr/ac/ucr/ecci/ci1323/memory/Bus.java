@@ -1,5 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.memory;
 
+import cr.ac.ucr.ecci.ci1323.exceptions.TryLockException;
+
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -11,12 +13,11 @@ public abstract class Bus {
         this.busLock = new ReentrantLock();
     }
 
-    protected boolean tryLock() {
-        return true;
-    }
+    protected synchronized boolean tryLock() {
+        if(this.busLock.isHeldByCurrentThread())
+            throw new TryLockException("The current thread already holds the bus lock.");
 
-    protected Lock getLock() {
-        return this.busLock;
+        return this.busLock.tryLock();
     }
 
 }
