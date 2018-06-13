@@ -5,9 +5,9 @@ import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
 
 public class DataBus extends Bus {
 
-    private DataCache coreZeroCache;
-    private DataCache coreOneCache;
-    private DataBlock dataMemory[];
+    private volatile DataCache coreZeroCache;
+    private volatile DataCache coreOneCache;
+    private volatile DataBlock dataMemory[];
 
     public DataBus(DataBlock[] dataMemory) {
         super();
