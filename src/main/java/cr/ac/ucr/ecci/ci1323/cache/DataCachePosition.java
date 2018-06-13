@@ -12,10 +12,10 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class DataCachePosition {
 
-    private int tag;
-    private DataBlock dataBlock;
-    private ReentrantLock cachePositionLock;
-    private CachePositionState cachePositionState;
+    private volatile int tag;
+    private volatile DataBlock dataBlock;
+    private volatile ReentrantLock cachePositionLock;
+    private volatile CachePositionState cachePositionState;
 
     public DataCachePosition(int tag, DataBlock dataBlock, CachePositionState cachePositionState) {
         this.tag = tag;

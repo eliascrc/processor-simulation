@@ -49,7 +49,7 @@ public class ContextQueue {
         if (!this.contextQueueLock.isHeldByCurrentThread())
             throw new TryLockException("The current thread cannot unlock the queue without holding the lock.");
 
-        contextQueueLock.unlock();
+        this.contextQueueLock.unlock();
     }
 
     /**

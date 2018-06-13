@@ -1,5 +1,6 @@
 package cr.ac.ucr.ecci.ci1323.cache;
 
+import cr.ac.ucr.ecci.ci1323.exceptions.TryLockException;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
 
 import java.util.concurrent.locks.ReentrantLock;
@@ -11,14 +12,35 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class InstructionCachePosition {
 
-    private int tag;
-    private InstructionBlock instructionBlock;
-    private ReentrantLock cachePositionLock;
+    private volatile int tag;
+    private volatile InstructionBlock instructionBlock;
+    private volatile ReentrantLock cachePositionLock;
 
     public InstructionCachePosition(int tag, InstructionBlock instructionBlock) {
         this.tag = tag;
         this.instructionBlock = instructionBlock;
         this.cachePositionLock = new ReentrantLock();
+    }
+
+    /**
+     * Synchronized method for trying to lock the instruction cache position lock
+     * @return false if not locked, true if locked
+     */
+    public synchronized boolean tryLock() {
+        if (this.cachePositionLock.isHeldByCurrentThread())
+            throw new TryLockException("The instruction cache position is already hold by this thread.");
+
+        return this.cachePositionLock.tryLock();
+    }
+
+    /**
+     * Synchronized method for trying to unlock the instruction cache position
+     */
+    public synchronized void unlock() {
+        if (!this.cachePositionLock.isHeldByCurrentThread())
+            throw new TryLockException("The current thread cannot unlock the instruction cache position without holding the lock.");
+
+        this.cachePositionLock.unlock();
     }
 
     public int getTag() {

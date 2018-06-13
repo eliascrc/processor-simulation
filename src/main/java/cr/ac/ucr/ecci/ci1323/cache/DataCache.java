@@ -9,8 +9,8 @@ import cr.ac.ucr.ecci.ci1323.memory.Bus;
  */
 public class DataCache {
 
-    private DataCachePosition[] dataCachePositions;
-    private Bus dataBus;
+    private volatile DataCachePosition[] dataCachePositions;
+    private volatile Bus dataBus;
 
     /**
      * Class constructor, initializes the cache with the respective amount of positions and sets their states
