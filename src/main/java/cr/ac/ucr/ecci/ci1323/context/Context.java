@@ -31,6 +31,8 @@ public class Context {
      */
     private volatile int contextNumber;
 
+    private int currentQuantum;
+
     /**
      * Constructor that sets the PC, initializes the registers and sets the tics to 0.
      * @param programCounter the context's PC.
@@ -40,6 +42,7 @@ public class Context {
         this.registers = new int[SimulationConstants.TOTAL_REGISTERS];
         this.executionTics = SimulationConstants.INITIAL_TICKS;
         this.contextNumber = contextNumber;
+        this.currentQuantum = SimulationConstants.INITIAL_QUANTUM;
     }
 
     /**
@@ -54,9 +57,28 @@ public class Context {
         System.out.println("} , Tics = " + this.executionTics + ", #Context = " + this.contextNumber);
     }
 
+    public void incrementQuantum() {
+        this.currentQuantum++;
+    }
+
+    public void incrementClockCycle() {
+        this.executionTics++;
+    }
+
+    public void incrementPC(int increment) {
+        this.programCounter += increment;
+    }
+
     //----------------------------------------------------------------------------------------
     // Setters and Getters
     //----------------------------------------------------------------------------------------
+    public int getCurrentQuantum() {
+        return currentQuantum;
+    }
+
+    public void setCurrentQuantum(int currentQuantum) {
+        this.currentQuantum = currentQuantum;
+    }
 
     public int getProgramCounter() {
         return programCounter;

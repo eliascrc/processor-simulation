@@ -1,6 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.cache;
 
 import cr.ac.ucr.ecci.ci1323.memory.Bus;
+import cr.ac.ucr.ecci.ci1323.memory.DataBus;
 
 /**
  * Represents the position of a data cache, with its respective block and tag.
@@ -10,7 +11,7 @@ import cr.ac.ucr.ecci.ci1323.memory.Bus;
 public class DataCache {
 
     private volatile DataCachePosition[] dataCachePositions;
-    private volatile Bus dataBus;
+    private volatile DataBus dataBus;
 
     /**
      * Class constructor, initializes the cache with the respective amount of positions and sets their states
@@ -18,11 +19,13 @@ public class DataCache {
      * @param dataBus
      * @param cacheSize
      */
-    public DataCache(Bus dataBus, int cacheSize) {
+    public DataCache(DataBus dataBus, int cacheSize) {
         this.dataCachePositions = new DataCachePosition[cacheSize];
-        for (int cachePosition = 0; cachePosition < this.dataCachePositions.length; cachePosition++) {
-            this.dataCachePositions[cachePosition].setCachePositionState(CachePositionState.INVALID);
+
+        for (int i = 0; i < this.dataCachePositions.length; i++) {
+            this.dataCachePositions[i] = new DataCachePosition(-1, null, CachePositionState.INVALID);
         }
+
         this.dataBus = dataBus;
     }
 
@@ -34,11 +37,15 @@ public class DataCache {
         this.dataCachePositions = dataCachePositions;
     }
 
+    public DataCachePosition getDataCachePosition(int position) {
+        return this.dataCachePositions[position];
+    }
+
     public Bus getDataBus() {
         return dataBus;
     }
 
-    public void setDataBus(Bus dataBus) {
+    public void setDataBus(DataBus dataBus) {
         this.dataBus = dataBus;
     }
 }

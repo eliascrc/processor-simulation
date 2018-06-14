@@ -13,7 +13,14 @@ import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
 
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.concurrent.Phaser;
 
+/**
+ * Main thread which controls the simulation and initializes everything needed to start the execution of threads in
+ * both cores.
+ *
+ * @author Josué León Sarkis, Elías Calderón, Daniel Montes de Oca
+ */
 public class SimulationController {
 
     private volatile ContextQueue contextQueue;
@@ -40,11 +47,19 @@ public class SimulationController {
 
         Scanner scanner = new Scanner(System.in);
         System.out.print("Ingrese el Quantum maximo: ");
+
         int maxQuantum = scanner.nextInt();
+        while (maxQuantum < 1) {
+            maxQuantum = scanner.nextInt();
+        }
+
+        Phaser simulationBarrier = new Phaser(1);
 
         this.contextQueue.tryLock();
-        this.coreZero = new CoreZero(maxQuantum, this.contextQueue.getNextContext(), this);
-        this.coreOne = new CoreOne(maxQuantum, this.contextQueue.getNextContext(), this);
+        this.coreZero = new CoreZero(simulationBarrier, maxQuantum, this.contextQueue.getNextContext(), this,
+                this.instructionBus, this.dataBus,0);
+        this.coreOne = new CoreOne(simulationBarrier, maxQuantum, this.contextQueue.getNextContext(), this,
+                this.instructionBus, this.dataBus, 1);
         this.contextQueue.unlock();
 
         this.dataBus.setCoreZeroCache(this.coreZero.getDataCache());
@@ -52,6 +67,15 @@ public class SimulationController {
 
         this.coreZero.run();
         this.coreOne.run();
+    }
+
+    /**
+     * Adds a finished thread to the finished threads list for statistical purposes.
+     *
+     * @param context
+     */
+    public synchronized void addFinishedThread(Context context) {
+        this.finishedThreads.add(context);
     }
 
     public ContextQueue getContextQueue() {
