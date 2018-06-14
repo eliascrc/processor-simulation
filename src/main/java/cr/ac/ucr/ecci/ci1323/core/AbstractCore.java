@@ -156,7 +156,9 @@ public abstract class AbstractCore extends Thread {
             this.currentContext.setCurrentQuantum(SimulationConstants.INITIAL_QUANTUM);
         }
         else {
+            this.currentContext.setOldContext(false);
             contextQueue.pushContext(this.currentContext);
+            nextContext.setOldContext(true);
             this.currentContext = nextContext;
         }
 

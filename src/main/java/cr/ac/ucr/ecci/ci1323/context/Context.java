@@ -34,6 +34,12 @@ public class Context {
     private int currentQuantum;
 
     /**
+     * Defines the priority of the context.
+     */
+    private boolean isOldContext;
+
+
+    /**
      * Constructor that sets the PC, initializes the registers and sets the tics to 0.
      * @param programCounter the context's PC.
      */
@@ -102,5 +108,13 @@ public class Context {
 
     public void setExecutionTics(int executionTics) {
         this.executionTics = executionTics;
+    }
+
+    public boolean isOldContext() {
+        return isOldContext;
+    }
+
+    public void setOldContext(boolean oldContext) {
+        isOldContext = oldContext;
     }
 }

@@ -48,6 +48,7 @@ public class CoreZero extends AbstractCore {
             super.finishFINExecution();
 
         } else { // there is a waiting context in execution
+            this.waitingContext.setOldContext(true);
             this.currentContext = this.waitingContext;
             this.waitingContext = null;
         }
@@ -76,7 +77,7 @@ public class CoreZero extends AbstractCore {
             while (!contextQueue.tryLock()) {
                 this.advanceClockCycle();
             }
-
+            this.currentContext.setOldContext(false);
             contextQueue.pushContext(this.currentContext);
             contextQueue.unlock();
 
@@ -112,7 +113,6 @@ public class CoreZero extends AbstractCore {
         ContextQueue contextQueue = this.simulationController.getContextQueue();
 
         if (this.waitingContext != null) {
-
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier);
             this.currentContext = this.waitingContext;
             this.waitingContext = null;
@@ -134,6 +134,7 @@ public class CoreZero extends AbstractCore {
 
             Context nextContext = contextQueue.getNextContext();
             if (nextContext != null) {
+                nextContext.setOldContext(false);
                 this.currentContext = nextContext;
                 this.missHandler.run();
             }
