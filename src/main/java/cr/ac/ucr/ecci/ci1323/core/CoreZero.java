@@ -21,14 +21,16 @@ public class CoreZero extends AbstractCore {
 
     private MissHandler missHandler;
     private Context waitingContext;
+
     private int reservedDataCachePosition;
+
     private int reservedInstructionCachePosition;
 
     public CoreZero(Phaser simulationBarrier, int maxQuantum, Context startingContext,
                     SimulationController simulationController, InstructionBus instructionBus,
                     DataBus dataBus, int coreNumber) {
-        super(simulationBarrier, maxQuantum, startingContext, simulationController, SimulationConstants.TOTAL_CORE_CERO_CACHE_POSITIONS,
-                instructionBus, dataBus, coreNumber);
+        super(simulationBarrier, maxQuantum, startingContext, simulationController,
+                SimulationConstants.TOTAL_CORE_CERO_CACHE_POSITIONS, instructionBus, dataBus, coreNumber);
 
         this.waitingContext = null;
         this.reservedDataCachePosition = this.reservedInstructionCachePosition = -1;
@@ -98,9 +100,11 @@ public class CoreZero extends AbstractCore {
             InstructionCachePosition instructionCachePosition = this.instructionCache
                     .getInstructionCachePosition(nextInstructionCachePosition);
 
-            if (!(instructionCachePosition.getTag() == nextInstructionBlockNumber)) { // miss
-                enterCacheMiss(MissType.INSTRUCTION);
-
+            if (instructionCachePosition.getTag() != nextInstructionBlockNumber) { // miss
+                solvedMiss = this.enterCacheMiss(MissType.INSTRUCTION, nextInstructionBlockNumber,
+                        nextInstructionCachePosition);
+            } else {
+                solvedMiss = true;
             }
         }
         return this.instructionCache.getInstructionCachePosition(nextInstructionCachePosition)
@@ -108,26 +112,22 @@ public class CoreZero extends AbstractCore {
     }
 
     // TODO Manejar el hilillo principal
-    private boolean enterCacheMiss(MissType missType) {
+    private boolean enterCacheMiss(MissType missType, int nextBlockNumber, int nextCachePosition) {
         boolean solvedMiss = true;
         ContextQueue contextQueue = this.simulationController.getContextQueue();
 
         if (this.waitingContext != null) {
-            this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier);
+            this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier ,
+                    nextBlockNumber, nextCachePosition);
             this.currentContext = this.waitingContext;
             this.waitingContext = null;
             this.missHandler.run();
 
         } else if (missHandler != null) {
-            MissHandler.setContext(this.currentContext);
-            MissHandler.setCoreZero(this);
-            MissHandler.setMissType(missType);
-            MissHandler.setSimulationBarrier(this.simulationBarrier);
-
-            solvedMiss = MissHandler.solveMiss();
-
+            solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition);
         } else { // miss handler is not running and there is not a waiting context
-            this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier);
+            this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
+                    nextBlockNumber, nextCachePosition);
 
             while (contextQueue.tryLock())
                 this.advanceClockCycle();
@@ -142,6 +142,28 @@ public class CoreZero extends AbstractCore {
         }
 
         return solvedMiss;
+    }
+
+    public boolean solveMissLocally(MissType missType, int nextBlockNumber, int nextCachePosition) {
+        switch (missType) {
+            case INSTRUCTION:
+                return this.solveInstructionMissLocally(nextBlockNumber, nextCachePosition);
+            default:
+                throw new IllegalArgumentException("Invalid Miss Type in core zero.");
+        }
+    }
+
+    public boolean solveInstructionMissLocally(int nextBlockNumber, int nextCachePosition) {
+        if (this.reservedInstructionCachePosition == -1) { // there is no other cache position reserved
+            this.reservedInstructionCachePosition = nextCachePosition;
+            this.instructionCache.getInstructionBlockFromMemory(nextBlockNumber, nextCachePosition, this);
+            this.reservedInstructionCachePosition = -1;
+            return true;
+        }
+
+        // there is another cache position reserved
+        this.advanceClockCycle();
+        return false;
     }
 
     public void finishMissHandlerExecution() {
@@ -164,6 +186,20 @@ public class CoreZero extends AbstractCore {
         this.waitingContext = waitingContext;
     }
 
+    public int getReservedDataCachePosition() {
+        return reservedDataCachePosition;
+    }
 
+    public void setReservedDataCachePosition(int reservedDataCachePosition) {
+        this.reservedDataCachePosition = reservedDataCachePosition;
+    }
+
+    public int getReservedInstructionCachePosition() {
+        return reservedInstructionCachePosition;
+    }
+
+    public void setReservedInstructionCachePosition(int reservedInstructionCachePosition) {
+        this.reservedInstructionCachePosition = reservedInstructionCachePosition;
+    }
 
 }
