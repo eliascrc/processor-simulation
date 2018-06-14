@@ -21,6 +21,7 @@ public abstract class AbstractCore extends Thread {
 
     protected Phaser simulationBarrier;
     protected DataCache dataCache;
+
     protected InstructionCache instructionCache;
     protected Context currentContext;
     protected SimulationController simulationController;
@@ -321,6 +322,14 @@ public abstract class AbstractCore extends Thread {
 
     public DataCache getDataCache() {
         return dataCache;
+    }
+
+    public InstructionCache getInstructionCache() {
+        return instructionCache;
+    }
+
+    public void setInstructionCache(InstructionCache instructionCache) {
+        this.instructionCache = instructionCache;
     }
 
 }

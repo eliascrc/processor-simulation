@@ -8,64 +8,69 @@ import java.util.concurrent.Phaser;
 
 public class MissHandler extends Thread {
 
-    private static CoreZero coreZero;
-    private static Context context;
-    private static MissType missType;
-    private static Phaser simulationBarrier;
+    private CoreZero coreZero;
+    private Context context;
+    private MissType missType;
+    private Phaser simulationBarrier;
+    private int nextCachePosition;
+    private int nextBlockNumber;
 
-    MissHandler(CoreZero coreZero, Context context, MissType missType, Phaser simulationBarrier) {
-        MissHandler.coreZero = coreZero;
-        MissHandler.context = context;
-        MissHandler.missType = missType;
-        MissHandler.simulationBarrier = simulationBarrier;
+    MissHandler(CoreZero coreZero, Context context, MissType missType, Phaser simulationBarrier, int nextBlockNumber,
+                int nextCachePosition) {
+        this.coreZero = coreZero;
+        this.context = context;
+        this.missType = missType;
+        this.simulationBarrier = simulationBarrier;
+        this.nextCachePosition = nextCachePosition;
+        this.nextBlockNumber = nextBlockNumber;
     }
 
     @Override
     public void run() {
-        MissHandler.simulationBarrier.register();
-        MissHandler.solveMiss();
+        this.simulationBarrier.register();
+        this.solveMiss();
         // TODO (DANIEL) resolvio fallo
     }
 
-    public static boolean solveMiss() {
+    public void solveMiss() {
 
-        switch (MissHandler.missType) {
+        switch (this.missType) {
             case INSTRUCTION:
-                return MissHandler.solveInstructionMiss();
+                this.solveInstructionMiss();
             default:
                 throw new IllegalArgumentException("Invalid Miss Type in miss handler.");
         }
     }
 
-    private static boolean solveInstructionMiss() {
-        if (reservedInstructionCachePosition == -1) { // there is no other cache position reserved
-            reservedInstructionCachePosition = nextInstructionCachePosition;
-            instructionCache.getInstructionBlockFromMemory(nextInstructionBlockNumber,
-                    nextInstructionCachePosition, MissHandler.coreZero);
-            reservedInstructionCachePosition = -1;
-            return true;
-        }
-
-        // there is another cache position reserved
-        MissHandler.advanceClockCycle(); // TODO El miss handler deberia tener su propio metodo para esto
-        return false;
-
+    private void solveInstructionMiss() {
+        // there is no other cache position reserved
+        this.coreZero.setReservedInstructionCachePosition(this.nextCachePosition);
+        this.coreZero.getInstructionCache().getInstructionBlockFromMemory(this.nextBlockNumber,
+                this.nextCachePosition, this.coreZero);
+        this.coreZero.setReservedInstructionCachePosition(-1);
     }
 
-    public static void setCoreZero(CoreZero coreZero) {
-        MissHandler.coreZero = coreZero;
+    private void advanceClockCycle() {
+        this.simulationBarrier.arriveAndAwaitAdvance();
+        this.context.incrementClockCycle();
+        // Por ahora nada mas
+        this.simulationBarrier.arriveAndAwaitAdvance();
     }
 
-    public static void setContext(Context context) {
-        MissHandler.context = context;
+    public void setCoreZero(CoreZero coreZero) {
+        this.coreZero = coreZero;
     }
 
-    public static void setMissType(MissType missType) {
-        MissHandler.missType = missType;
+    public void setContext(Context context) {
+        this.context = context;
     }
 
-    public static void setSimulationBarrier(Phaser simulationBarrier) {
-        MissHandler.simulationBarrier = simulationBarrier;
+    public void setMissType(MissType missType) {
+        this.missType = missType;
+    }
+
+    public void setSimulationBarrier(Phaser simulationBarrier) {
+        this.simulationBarrier = simulationBarrier;
     }
 
 }
