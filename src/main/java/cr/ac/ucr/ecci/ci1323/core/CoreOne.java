@@ -28,8 +28,7 @@ public class CoreOne extends AbstractCore {
 
     @Override
     public void run() {
-        System.out.println("Core One! Ready. The context is: ");
-        super.currentContext.print();
+        super.executeCore();
     }
 
     @Override

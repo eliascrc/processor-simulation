@@ -29,14 +29,14 @@ public class MissHandler extends Thread {
     public void run() {
         this.simulationBarrier.register();
         this.solveMiss();
-        // TODO (DANIEL) resolvio fallo
     }
 
     public void solveMiss() {
-
         switch (this.missType) {
             case INSTRUCTION:
                 this.solveInstructionMiss();
+                break;
+
             default:
                 throw new IllegalArgumentException("Invalid Miss Type in miss handler.");
         }
@@ -50,13 +50,6 @@ public class MissHandler extends Thread {
         this.coreZero.setReservedInstructionCachePosition(-1);
         this.coreZero.setWaitingContext(this.context);
         this.coreZero.finishMissHandlerExecution();
-    }
-
-    private void advanceClockCycle() {
-        this.simulationBarrier.arriveAndAwaitAdvance();
-        this.context.incrementClockCycle();
-        // Por ahora nada mas
-        this.simulationBarrier.arriveAndAwaitAdvance();
     }
 
     public Context getContext() {

@@ -13,7 +13,8 @@ public abstract class Bus {
         this.busLock = new ReentrantLock();
     }
 
-    public  synchronized boolean tryLock() {
+        public synchronized boolean tryLock() {
+
         if(this.busLock.isHeldByCurrentThread())
             throw new TryLockException("The current thread already holds the bus lock.");
 

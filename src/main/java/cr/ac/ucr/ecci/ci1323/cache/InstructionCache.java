@@ -49,13 +49,10 @@ public class InstructionCache {
     public void getInstructionBlockFromMemory(int nextInstructionBlockNumber, int nextInstructionPositionNumber,
                                               AbstractCore callingCore) {
 
-        InstructionCachePosition instructionCachePosition =
-                this.getInstructionCachePosition(nextInstructionPositionNumber);
         while (!this.instructionBus.tryLock()) {
             callingCore.advanceClockCycle();
         }
         callingCore.advanceClockCycle();
-
         // Advances 40 clock cycles
         for (int i = 0; i < 40; i++) {
             callingCore.advanceClockCycle();

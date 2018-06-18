@@ -42,9 +42,7 @@ public class CoreZero extends AbstractCore {
 
     @Override
     public void run() {
-        System.out.println("Core Zero! Ready. The context is: ");
-        super.currentContext.print();
-
+        super.executeCore();
     }
 
     @Override
@@ -97,7 +95,7 @@ public class CoreZero extends AbstractCore {
                                                   int nextInstructionCachePositionOffset) {
         boolean solvedMiss = false;
         while (!solvedMiss) {
-            while (this.reservedInstructionCachePosition != nextInstructionCachePosition) {
+            while (this.reservedInstructionCachePosition != -1) {
                 this.advanceClockCycle();
             }
 
@@ -135,7 +133,7 @@ public class CoreZero extends AbstractCore {
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                     nextBlockNumber, nextCachePosition);
 
-            while (contextQueue.tryLock())
+            while (!contextQueue.tryLock())
                 this.advanceClockCycle();
 
             Context nextContext = contextQueue.getNextContext();
@@ -151,6 +149,7 @@ public class CoreZero extends AbstractCore {
     }
 
     public boolean solveMissLocally(MissType missType, int nextBlockNumber, int nextCachePosition) {
+
         switch (missType) {
             case INSTRUCTION:
                 return this.solveInstructionMissLocally(nextBlockNumber, nextCachePosition);

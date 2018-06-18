@@ -56,6 +56,7 @@ public abstract class AbstractCore extends Thread {
             Instruction instructionToExecute = this.getInstructionFromCache(nextInstructionBlockNumber,
                     nextInstructionCachePosition, nextInstructionCachePositionOffset);
             this.currentContext.incrementPC(SimulationConstants.WORD_SIZE);
+            System.out.println(this.coreNumber);
 
             this.executeInstruction(instructionToExecute);
             this.currentContext.incrementQuantum();

@@ -53,7 +53,7 @@ public class SimulationController {
             maxQuantum = scanner.nextInt();
         }
 
-        Phaser simulationBarrier = new Phaser(1);
+        Phaser simulationBarrier = new Phaser();
 
         this.contextQueue.tryLock();
         this.coreZero = new CoreZero(simulationBarrier, maxQuantum, this.contextQueue.getNextContext(), this,
@@ -65,8 +65,13 @@ public class SimulationController {
         this.dataBus.setCoreZeroCache(this.coreZero.getDataCache());
         this.dataBus.setCoreOneCache(this.coreOne.getDataCache());
 
-        this.coreZero.run();
-        this.coreOne.run();
+        this.coreZero.start();
+        this.coreOne.start();
+
+        while (true) {
+            simulationBarrier.arriveAndAwaitAdvance();
+            simulationBarrier.arriveAndAwaitAdvance();
+        }
     }
 
     /**
