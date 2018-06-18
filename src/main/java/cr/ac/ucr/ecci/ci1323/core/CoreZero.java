@@ -103,6 +103,9 @@ public class CoreZero extends AbstractCore {
             if (instructionCachePosition.getTag() != nextInstructionBlockNumber) { // miss
                 solvedMiss = this.enterCacheMiss(MissType.INSTRUCTION, nextInstructionBlockNumber,
                         nextInstructionCachePosition);
+
+                if (solvedMiss)
+                    this.solvedMiss();
             } else {
                 solvedMiss = true;
             }
@@ -166,8 +169,13 @@ public class CoreZero extends AbstractCore {
         return false;
     }
 
+    private void solvedMiss() {
+        
+    }
+
     public void finishMissHandlerExecution() {
         this.missHandler = null;
+        this.solvedMiss();
     }
 
     public MissHandler getMissHandler() {
