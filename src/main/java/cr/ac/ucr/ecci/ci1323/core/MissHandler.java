@@ -48,6 +48,7 @@ public class MissHandler extends Thread {
         this.coreZero.getInstructionCache().getInstructionBlockFromMemory(this.nextBlockNumber,
                 this.nextCachePosition, this.coreZero);
         this.coreZero.setReservedInstructionCachePosition(-1);
+        this.coreZero.setWaitingContext(this.context);
         this.coreZero.finishMissHandlerExecution();
     }
 
@@ -56,6 +57,10 @@ public class MissHandler extends Thread {
         this.context.incrementClockCycle();
         // Por ahora nada mas
         this.simulationBarrier.arriveAndAwaitAdvance();
+    }
+
+    public Context getContext() {
+        return context;
     }
 
     public void setCoreZero(CoreZero coreZero) {

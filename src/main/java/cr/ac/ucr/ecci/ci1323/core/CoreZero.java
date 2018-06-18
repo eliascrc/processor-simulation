@@ -26,6 +26,9 @@ public class CoreZero extends AbstractCore {
 
     private int reservedInstructionCachePosition;
 
+    private boolean changeContext;
+    private boolean waitingForReservation;
+
     public CoreZero(Phaser simulationBarrier, int maxQuantum, Context startingContext,
                     SimulationController simulationController, InstructionBus instructionBus,
                     DataBus dataBus, int coreNumber) {
@@ -34,6 +37,7 @@ public class CoreZero extends AbstractCore {
 
         this.waitingContext = null;
         this.reservedDataCachePosition = this.reservedInstructionCachePosition = -1;
+        this.changeContext = false;
     }
 
     @Override
@@ -105,7 +109,7 @@ public class CoreZero extends AbstractCore {
                         nextInstructionCachePosition);
 
                 if (solvedMiss)
-                    this.solvedMiss();
+                    this.solvedMiss(null);
             } else {
                 solvedMiss = true;
             }
@@ -118,17 +122,16 @@ public class CoreZero extends AbstractCore {
     private boolean enterCacheMiss(MissType missType, int nextBlockNumber, int nextCachePosition) {
         boolean solvedMiss = true;
         ContextQueue contextQueue = this.simulationController.getContextQueue();
-
-        if (this.waitingContext != null) {
+        if (this.waitingContext != null) { // there is a waiting context,
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier ,
                     nextBlockNumber, nextCachePosition);
             this.currentContext = this.waitingContext;
             this.waitingContext = null;
             this.missHandler.run();
 
-        } else if (missHandler != null) {
+        } else if (this.missHandler != null) { // miss handler is running, must try to solve by itself
             solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition);
-        } else { // miss handler is not running and there is not a waiting context
+        } else { // miss handler is not running and there is no waiting context
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                     nextBlockNumber, nextCachePosition);
 
@@ -158,10 +161,13 @@ public class CoreZero extends AbstractCore {
 
     public boolean solveInstructionMissLocally(int nextBlockNumber, int nextCachePosition) {
         if (this.reservedInstructionCachePosition == -1) { // there is no other cache position reserved
+            this.waitingForReservation = false;
             this.reservedInstructionCachePosition = nextCachePosition;
             this.instructionCache.getInstructionBlockFromMemory(nextBlockNumber, nextCachePosition, this);
             this.reservedInstructionCachePosition = -1;
             return true;
+        } else {
+            this.waitingForReservation = true;
         }
 
         // there is another cache position reserved
@@ -169,13 +175,45 @@ public class CoreZero extends AbstractCore {
         return false;
     }
 
-    private void solvedMiss() {
-        
+    private void solvedMiss(Context solvedMissContext) {
+        if(this.currentContext == null) { // there is no other thread in execution
+            this.currentContext = this.waitingContext;
+        } else {
+            if(this.currentContext.isOldContext()) { // miss was resolved in old thread
+                if(this.changeContext) {
+                    this.waitingContext = this.currentContext;
+                    this.currentContext = this.waitingContext;
+                }
+            } else { // miss was resolved in newer thread
+                if(this.waitingForReservation) { // current thread in execution is in miss
+                    this.waitingContext = this.currentContext;
+                    this.currentContext = solvedMissContext;
+                } // current thread in execution is not in miss
+            }
+        }
+        this.changeContext = true;
     }
 
     public void finishMissHandlerExecution() {
+        Context solvedMissContext = this.missHandler.getContext();
         this.missHandler = null;
-        this.solvedMiss();
+        this.solvedMiss(solvedMissContext);
+    }
+
+    public boolean isWaitingForReservation() {
+        return waitingForReservation;
+    }
+
+    public void setWaitingForReservation(boolean waitingForReservation) {
+        this.waitingForReservation = waitingForReservation;
+    }
+
+    public boolean isChangeContext() {
+        return changeContext;
+    }
+
+    public void setChangeContext(boolean changeContext) {
+        this.changeContext = changeContext;
     }
 
     public MissHandler getMissHandler() {
