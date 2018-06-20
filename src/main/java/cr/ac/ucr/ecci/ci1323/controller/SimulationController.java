@@ -24,7 +24,7 @@ import java.util.concurrent.Phaser;
 public class SimulationController {
 
     private volatile ContextQueue contextQueue;
-    private volatile ArrayList<Context> finishedThreads;
+    private volatile ArrayList<Context> finishedContexts;
     private volatile InstructionBus instructionBus;
     private volatile DataBus dataBus;
     private CoreZero coreZero;
@@ -32,7 +32,7 @@ public class SimulationController {
 
     public SimulationController() {
         this.contextQueue = new ContextQueue();
-        this.finishedThreads = new ArrayList<>();
+        this.finishedContexts = new ArrayList<>();
         this.instructionBus = new InstructionBus(new InstructionBlock[SimulationConstants.TOTAL_INSTRUCTION_BLOCKS]);
         this.dataBus = new DataBus(new DataBlock[SimulationConstants.TOTAL_DATA_BLOCKS]);
     }
@@ -57,10 +57,17 @@ public class SimulationController {
         simulationBarrier.register();
 
         this.contextQueue.tryLock();
-        this.coreZero = new CoreZero(simulationBarrier, maxQuantum, this.contextQueue.getNextContext(), this,
+
+        Context nextContext = this.contextQueue.getNextContext();
+        nextContext.setOldContext(true);
+        this.coreZero = new CoreZero(simulationBarrier, maxQuantum, nextContext, this,
                 this.instructionBus, this.dataBus,0);
-        this.coreOne = new CoreOne(simulationBarrier, maxQuantum, this.contextQueue.getNextContext(), this,
+
+        nextContext = this.contextQueue.getNextContext();
+        nextContext.setOldContext(false);
+        this.coreOne = new CoreOne(simulationBarrier, maxQuantum, nextContext, this,
                 this.instructionBus, this.dataBus, 1);
+
         this.contextQueue.unlock();
 
         this.dataBus.setCoreZeroCache(this.coreZero.getDataCache());
@@ -69,10 +76,20 @@ public class SimulationController {
         this.coreZero.start();
         this.coreOne.start();
 
-        while (true) {
+        while (simulationBarrier.getRegisteredParties() > 1) {
             simulationBarrier.arriveAndAwaitAdvance();
             simulationBarrier.arriveAndAwaitAdvance();
         }
+
+        simulationBarrier.arriveAndDeregister();
+
+        System.out.println("Finished Contexts:");
+        for (Context context: this.finishedContexts) {
+            context.print();
+            System.out.println();
+        }
+
+        System.out.println("Preciosisimo!");
     }
 
     /**
@@ -81,15 +98,15 @@ public class SimulationController {
      * @param context
      */
     public synchronized void addFinishedThread(Context context) {
-        this.finishedThreads.add(context);
+        this.finishedContexts.add(context);
     }
 
     public ContextQueue getContextQueue() {
         return contextQueue;
     }
 
-    public ArrayList<Context> getFinishedThreads() {
-        return finishedThreads;
+    public ArrayList<Context> getFinishedContexts() {
+        return finishedContexts;
     }
 
 }

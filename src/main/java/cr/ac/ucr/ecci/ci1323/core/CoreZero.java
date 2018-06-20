@@ -112,7 +112,6 @@ public class CoreZero extends AbstractCore {
         return this.instructionCache.getInstructionCachePosition(nextInstructionCachePosition).getInstructionBlock();
     }
 
-    // TODO Manejar el hilillo principal
     private boolean enterCacheMiss(MissType missType, int nextBlockNumber, int nextCachePosition) {
         boolean solvedMiss = true;
         ContextQueue contextQueue = this.simulationController.getContextQueue();

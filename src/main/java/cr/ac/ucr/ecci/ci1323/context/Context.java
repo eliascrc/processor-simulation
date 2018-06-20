@@ -38,6 +38,8 @@ public class Context {
      */
     private boolean isOldContext;
 
+    private int finishingCore;
+
 
     /**
      * Constructor that sets the PC, initializes the registers and sets the tics to 0.
@@ -60,7 +62,8 @@ public class Context {
         for (int register : this.registers) {
             System.out.print(register + ", ");
         }
-        System.out.println("} , Tics = " + this.executionTics + ", #Context = " + this.contextNumber);
+        System.out.println("} , Tics = " + this.executionTics + ", #Context = " + this.contextNumber
+        + ", Finishing Core: " + this.finishingCore);
     }
 
     public void incrementQuantum() {
@@ -116,5 +119,13 @@ public class Context {
 
     public void setOldContext(boolean oldContext) {
         isOldContext = oldContext;
+    }
+
+    public int getFinishingCore() {
+        return finishingCore;
+    }
+
+    public void setFinishingCore(int finishingCore) {
+        this.finishingCore = finishingCore;
     }
 }

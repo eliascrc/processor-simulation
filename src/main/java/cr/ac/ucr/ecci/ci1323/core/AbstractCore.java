@@ -75,6 +75,8 @@ public abstract class AbstractCore extends Thread {
             System.out.println(this.coreNumber);
         }
 
+        this.simulationBarrier.arriveAndDeregister();
+
     }
 
     protected void executeInstruction(Instruction instruction) {
@@ -123,6 +125,7 @@ public abstract class AbstractCore extends Thread {
 
     protected void executeFIN(Instruction instruction) {
         this.currentContext.incrementQuantum();
+        this.currentContext.setFinishingCore(this.coreNumber);
         this.advanceClockCycle();
         this.simulationController.addFinishedThread(this.currentContext);
         this.finishFINExecution();

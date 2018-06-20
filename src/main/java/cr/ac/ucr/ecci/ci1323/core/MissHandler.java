@@ -29,6 +29,7 @@ public class MissHandler extends Thread {
     @Override
     public void run() {
         this.solveMiss();
+        this.simulationBarrier.arriveAndDeregister();
     }
 
     public void solveMiss() {
