@@ -1,11 +1,16 @@
 package cr.ac.ucr.ecci.ci1323.core;
 
-import cr.ac.ucr.ecci.ci1323.cache.DataCache;
-import cr.ac.ucr.ecci.ci1323.cache.InstructionCache;
+import cr.ac.ucr.ecci.ci1323.cache.*;
 import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 import cr.ac.ucr.ecci.ci1323.context.Context;
+import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
+import cr.ac.ucr.ecci.ci1323.memory.DataBus;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
+import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
+import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
+
+import java.util.concurrent.Phaser;
 
 /**
  * Abstract core which contains the shared properties of both cores and inherits them the methods for
@@ -13,22 +18,171 @@ import cr.ac.ucr.ecci.ci1323.memory.Instruction;
  *
  * @author Josué León Sarkis, Elías Calderón, Daniel Montes de Oca
  */
-abstract class AbstractCore extends Thread {
+public abstract class AbstractCore extends Thread {
 
+    protected Phaser simulationBarrier;
     protected DataCache dataCache;
+
     protected InstructionCache instructionCache;
     protected Context currentContext;
     protected SimulationController simulationController;
     protected int maxQuantum;
-    protected int currentQuantum;
+    protected boolean executionFinished;
+    protected int coreNumber;
 
-    protected AbstractCore(int maxQuantum, Context startingContext, SimulationController simulationController) {
+    protected AbstractCore(Phaser simulationBarrier, int maxQuantum, Context startingContext,
+                           SimulationController simulationController, int totalCachePositions,
+                           InstructionBus instructionBus, DataBus dataBus, int coreNumber) {
 
+        this.simulationBarrier = simulationBarrier;
+        this.simulationBarrier.register();
         this.maxQuantum = maxQuantum;
         this.simulationController = simulationController;
         this.currentContext = startingContext;
-        this.currentQuantum = SimulationConstants.INITIAL_QUANTUM;
+
+        this.instructionCache = new InstructionCache(instructionBus, totalCachePositions);
+        this.dataCache = new DataCache(dataBus, totalCachePositions);
+
+        this.executionFinished = false;
+        this.coreNumber = coreNumber;
     }
+
+    protected void executeCore() {
+
+        while (!this.executionFinished) {
+            int nextInstructionBlockNumber = this.calculateInstructionBlockNumber();
+            int nextInstructionCachePosition = this.calculateCachePosition(nextInstructionBlockNumber, this.coreNumber);
+            int nextInstructionCachePositionOffset = this.calculateInstructionOffset();
+
+            InstructionBlock instructionBlock = this.getInstructionBlockFromCache(nextInstructionBlockNumber,
+                    nextInstructionCachePosition);
+
+            if (instructionBlock != null) {
+                Instruction instructionToExecute = instructionBlock.getInstruction(nextInstructionCachePositionOffset);
+                this.currentContext.incrementPC(SimulationConstants.WORD_SIZE);
+
+                this.executeInstruction(instructionToExecute);
+                this.currentContext.incrementQuantum();
+                this.advanceClockCycle();
+
+                if (this.currentContext.getCurrentQuantum() >= this.maxQuantum) {
+                    this.quantumExpired();
+                }
+            }
+            else
+                this.advanceClockCycle();
+
+            System.out.println(this.coreNumber);
+        }
+
+        this.simulationBarrier.arriveAndDeregister();
+
+    }
+
+    protected void executeInstruction(Instruction instruction) {
+        int operationCode = instruction.getOperationCode();
+        switch (operationCode) {
+            case 2:
+                this.executeJR(instruction);
+                break;
+            case 3:
+                this.executeJAL(instruction);
+                break;
+            case 4:
+                this.executeBEQZ(instruction);
+                break;
+            case 5:
+                this.executeBNEZ(instruction);
+                break;
+            case 8:
+                this.executeDADDI(instruction);
+                break;
+            case 12:
+                this.executeDMUL(instruction);
+                break;
+            case 14:
+                this.executeDDIV(instruction);
+                break;
+            case 32:
+                this.executeDADD(instruction);
+                break;
+            case 34:
+                this.executeDSUB(instruction);
+                break;
+            case 35:
+                this.executeLW(instruction);
+                break;
+            case 43:
+                this.executeSW(instruction);
+                break;
+            case 63:
+                this.executeFIN(instruction);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid instruction operation code");
+        }
+    }
+
+    protected void executeFIN(Instruction instruction) {
+        this.currentContext.incrementQuantum();
+        this.currentContext.setFinishingCore(this.coreNumber);
+        this.advanceClockCycle();
+        this.simulationController.addFinishedThread(this.currentContext);
+        this.finishFINExecution();
+    }
+
+    public void advanceClockCycle() {
+        this.simulationBarrier.arriveAndAwaitAdvance();
+        this.currentContext.incrementClockCycle();
+        // Por ahora nada mas
+        this.simulationBarrier.arriveAndAwaitAdvance();
+    }
+
+    protected void finishFINExecution() {
+        ContextQueue contextQueue = this.simulationController.getContextQueue();
+
+        // Tries to lock the context queue
+        while (!contextQueue.tryLock()) {
+            this.advanceClockCycle();
+        }
+
+        Context nextContext = contextQueue.getNextContext();
+        if (nextContext == null) { // checks if there is no other context in the queue
+            this.executionFinished = true;
+        } else { // there is a context waiting in the queue
+            this.currentContext = nextContext;
+        }
+
+        contextQueue.unlock();
+    }
+
+    protected void quantumExpired() {
+        ContextQueue contextQueue = this.simulationController.getContextQueue();
+
+        // Tries to lock the context queue
+        while (!contextQueue.tryLock()) {
+            this.advanceClockCycle();
+        }
+
+        Context nextContext = contextQueue.getNextContext();
+        if (nextContext == null) { // checks if there is no other context in the queue
+            this.currentContext.setCurrentQuantum(SimulationConstants.INITIAL_QUANTUM);
+        }
+        else {
+            this.currentContext.setOldContext(false);
+            contextQueue.pushContext(this.currentContext);
+            nextContext.setOldContext(true);
+            this.currentContext = nextContext;
+        }
+
+        contextQueue.unlock();
+    }
+
+    protected abstract void executeSW(Instruction instruction);
+
+    protected abstract void executeLW(Instruction instruction);
+
+    protected abstract InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition);
 
     protected void executeDADDI(Instruction instruction) {
         this.getRegisters()[instruction.getField(2)] = this.getRegisters()[instruction.getField(1)]
@@ -89,7 +243,7 @@ abstract class AbstractCore extends Thread {
      * @param instruction
      * @return
      */
-    public int calculateDataBlockNumber(Instruction instruction) {
+    protected int calculateDataBlockNumber(Instruction instruction) {
         int sourceRegister = this.currentContext.getRegisters()[instruction.getInstructionFields()[1]];
         int immediate = instruction.getInstructionFields()[3];
         int blockNumber = (sourceRegister + immediate) / SimulationConstants.BLOCK_SIZE;
@@ -102,7 +256,7 @@ abstract class AbstractCore extends Thread {
      * @param instruction
      * @return
      */
-    public int calculateDataOffset(Instruction instruction) {
+    protected int calculateDataOffset(Instruction instruction) {
         int sourceRegister = this.currentContext.getRegisters()[instruction.getInstructionFields()[1]];
         int immediate = instruction.getInstructionFields()[3];
         int offset = ((sourceRegister + immediate) % SimulationConstants.BLOCK_SIZE) / SimulationConstants.TOTAL_DATA_BLOCK_WORDS;
@@ -116,7 +270,7 @@ abstract class AbstractCore extends Thread {
      * @param coreNumber
      * @return
      */
-    public int calculateCachePosition(int blockNumber, int coreNumber) {
+    protected int calculateCachePosition(int blockNumber, int coreNumber) {
         if (coreNumber == 0) {
             return blockNumber % SimulationConstants.TOTAL_CORE_CERO_CACHE_POSITIONS;
         }
@@ -130,7 +284,7 @@ abstract class AbstractCore extends Thread {
      * @param coreNumber
      * @return
      */
-    public int calculateDataOtherCachePosition(int blockNumber, int coreNumber) {
+    protected int calculateDataOtherCachePosition(int blockNumber, int coreNumber) {
         if (coreNumber == 0) {
             return blockNumber % SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS;
         }
@@ -142,7 +296,7 @@ abstract class AbstractCore extends Thread {
      *
      * @return
      */
-    public int calculateInstructionBlockNumber() {
+    protected int calculateInstructionBlockNumber() {
         return (int) Math.floor(this.currentContext.getProgramCounter() / SimulationConstants.BLOCK_SIZE);
     }
 
@@ -151,13 +305,22 @@ abstract class AbstractCore extends Thread {
      *
      * @return
      */
-    public int calculateInstructionOffset() {
+    protected int calculateInstructionOffset() {
         return (this.currentContext.getProgramCounter() % SimulationConstants.BLOCK_SIZE) / SimulationConstants.INSTRUCTIONS_PER_BLOCK;
     }
 
     //----------------------------------------------------------------------------------------
     // Setters and Getters
     //----------------------------------------------------------------------------------------
+
+
+    public int getCoreNumber() {
+        return coreNumber;
+    }
+
+    public void setCoreNumber(int coreNumber) {
+        this.coreNumber = coreNumber;
+    }
 
     private int[] getRegisters() {
         return this.currentContext.getRegisters();
@@ -173,6 +336,14 @@ abstract class AbstractCore extends Thread {
 
     public DataCache getDataCache() {
         return dataCache;
+    }
+
+    public InstructionCache getInstructionCache() {
+        return instructionCache;
+    }
+
+    public void setInstructionCache(InstructionCache instructionCache) {
+        this.instructionCache = instructionCache;
     }
 
 }

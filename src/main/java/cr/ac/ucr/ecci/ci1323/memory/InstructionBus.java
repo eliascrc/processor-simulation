@@ -1,5 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.memory;
 
+import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
+
 public class InstructionBus extends Bus {
 
     private volatile InstructionBlock[] instructionMemory;
@@ -10,7 +12,8 @@ public class InstructionBus extends Bus {
     }
 
     public InstructionBlock getInstructionBlock(int index) {
-        return instructionMemory[index];
+        // The total data blocks are subtracted for mapping purposes
+        return instructionMemory[index - SimulationConstants.TOTAL_DATA_BLOCKS];
     }
 
     public void setInstructionBlock(int index, InstructionBlock instructionBlock) {

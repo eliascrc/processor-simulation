@@ -14,33 +14,10 @@ public class InstructionCachePosition {
 
     private volatile int tag;
     private volatile InstructionBlock instructionBlock;
-    private volatile ReentrantLock cachePositionLock;
 
     public InstructionCachePosition(int tag, InstructionBlock instructionBlock) {
         this.tag = tag;
         this.instructionBlock = instructionBlock;
-        this.cachePositionLock = new ReentrantLock();
-    }
-
-    /**
-     * Synchronized method for trying to lock the instruction cache position lock
-     * @return false if not locked, true if locked
-     */
-    public synchronized boolean tryLock() {
-        if (this.cachePositionLock.isHeldByCurrentThread())
-            throw new TryLockException("The instruction cache position is already hold by this thread.");
-
-        return this.cachePositionLock.tryLock();
-    }
-
-    /**
-     * Synchronized method for trying to unlock the instruction cache position
-     */
-    public synchronized void unlock() {
-        if (!this.cachePositionLock.isHeldByCurrentThread())
-            throw new TryLockException("The current thread cannot unlock the instruction cache position without holding the lock.");
-
-        this.cachePositionLock.unlock();
     }
 
     public int getTag() {

@@ -64,7 +64,7 @@ public class FileParser {
     }
 
     private List<String> readFiles() {
-        List<String> lines = new LinkedList<String>();
+        List<String> lines = new LinkedList<>();
 
         int programCounterIndex = SimulationConstants.INSTRUCTIONS_START;
         int contextNumber = 0;
@@ -81,7 +81,7 @@ public class FileParser {
     }
 
     private List<String> getLinesFromFile(File file) {
-        List<String> fileLines = new LinkedList<String>();
+        List<String> fileLines = new LinkedList<>();
 
         try {
             fileLines = FileUtils.readLines(file);
