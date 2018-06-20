@@ -42,8 +42,7 @@ public class CoreOne extends AbstractCore {
     }
 
     @Override
-    protected Instruction getInstructionFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition,
-                                                  int nextInstructionCachePositionOffset) {
+    protected InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition) {
         InstructionCachePosition instructionCachePosition = this.instructionCache.getInstructionCachePosition(
                 nextInstructionCachePosition);
 
@@ -51,6 +50,6 @@ public class CoreOne extends AbstractCore {
             this.instructionCache.getInstructionBlockFromMemory(nextInstructionBlockNumber, nextInstructionCachePosition,
                     this);
 
-        return instructionCachePosition.getInstructionBlock().getInstruction(nextInstructionCachePositionOffset);
+        return instructionCachePosition.getInstructionBlock();
     }
 }

@@ -32,7 +32,7 @@ public class SimulationController {
 
     public SimulationController() {
         this.contextQueue = new ContextQueue();
-        this.finishedThreads = new ArrayList<Context>();
+        this.finishedThreads = new ArrayList<>();
         this.instructionBus = new InstructionBus(new InstructionBlock[SimulationConstants.TOTAL_INSTRUCTION_BLOCKS]);
         this.dataBus = new DataBus(new DataBlock[SimulationConstants.TOTAL_DATA_BLOCKS]);
     }
@@ -54,6 +54,7 @@ public class SimulationController {
         }
 
         Phaser simulationBarrier = new Phaser();
+        simulationBarrier.register();
 
         this.contextQueue.tryLock();
         this.coreZero = new CoreZero(simulationBarrier, maxQuantum, this.contextQueue.getNextContext(), this,

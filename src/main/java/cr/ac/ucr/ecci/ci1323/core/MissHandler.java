@@ -21,13 +21,13 @@ public class MissHandler extends Thread {
         this.context = context;
         this.missType = missType;
         this.simulationBarrier = simulationBarrier;
+        this.simulationBarrier.register();
         this.nextCachePosition = nextCachePosition;
         this.nextBlockNumber = nextBlockNumber;
     }
 
     @Override
     public void run() {
-        this.simulationBarrier.register();
         this.solveMiss();
     }
 

@@ -22,11 +22,11 @@ public class CoreZero extends AbstractCore {
     private MissHandler missHandler;
     private Context waitingContext;
 
-    private int reservedDataCachePosition;
+    private volatile int reservedDataCachePosition;
 
-    private int reservedInstructionCachePosition;
+    private volatile int reservedInstructionCachePosition;
 
-    private boolean changeContext;
+    private volatile boolean changeContext;
     private boolean waitingForReservation;
 
     public CoreZero(Phaser simulationBarrier, int maxQuantum, Context startingContext,
@@ -91,8 +91,7 @@ public class CoreZero extends AbstractCore {
     }
 
     @Override
-    protected Instruction getInstructionFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition,
-                                                  int nextInstructionCachePositionOffset) {
+    protected InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition) {
         boolean solvedMiss = false;
         while (!solvedMiss) {
             while (this.reservedInstructionCachePosition != -1) {
@@ -105,15 +104,12 @@ public class CoreZero extends AbstractCore {
             if (instructionCachePosition.getTag() != nextInstructionBlockNumber) { // miss
                 solvedMiss = this.enterCacheMiss(MissType.INSTRUCTION, nextInstructionBlockNumber,
                         nextInstructionCachePosition);
-
-                if (solvedMiss)
-                    this.solvedMiss(null);
             } else {
                 solvedMiss = true;
             }
         }
-        return this.instructionCache.getInstructionCachePosition(nextInstructionCachePosition)
-                .getInstructionBlock().getInstruction(nextInstructionCachePositionOffset);
+
+        return this.instructionCache.getInstructionCachePosition(nextInstructionCachePosition).getInstructionBlock();
     }
 
     // TODO Manejar el hilillo principal
@@ -125,7 +121,7 @@ public class CoreZero extends AbstractCore {
                     nextBlockNumber, nextCachePosition);
             this.currentContext = this.waitingContext;
             this.waitingContext = null;
-            this.missHandler.run();
+            this.missHandler.start();
 
         } else if (this.missHandler != null) { // miss handler is running, must try to solve by itself
             solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition);
@@ -140,7 +136,7 @@ public class CoreZero extends AbstractCore {
             if (nextContext != null) {
                 nextContext.setOldContext(false);
                 this.currentContext = nextContext;
-                this.missHandler.run();
+                this.missHandler.start();
             }
             contextQueue.unlock();
         }
@@ -165,38 +161,35 @@ public class CoreZero extends AbstractCore {
             this.instructionCache.getInstructionBlockFromMemory(nextBlockNumber, nextCachePosition, this);
             this.reservedInstructionCachePosition = -1;
             return true;
-        } else {
-            this.waitingForReservation = true;
         }
 
-        // there is another cache position reserved
-        this.advanceClockCycle();
+        this.waitingForReservation = true;
         return false;
     }
 
     private void solvedMiss(Context solvedMissContext) {
+        this.changeContext = false;
+
         if(this.currentContext == null) { // there is no other thread in execution
             this.currentContext = this.waitingContext;
         } else {
-            if(this.currentContext.isOldContext()) { // miss was resolved in old thread
-                if(this.changeContext) {
+            if(this.waitingContext.isOldContext()) { // miss was resolved in old thread
+                this.changeContext = true;
+                /*if(this.changeContext) {
                     this.waitingContext = this.currentContext;
                     this.currentContext = this.waitingContext;
-                }
+                }*/
             } else { // miss was resolved in newer thread
                 if(this.waitingForReservation) { // current thread in execution is in miss
-                    this.waitingContext = this.currentContext;
-                    this.currentContext = solvedMissContext;
+                    this.changeContext = true;
                 } // current thread in execution is not in miss
             }
         }
-        this.changeContext = true;
     }
 
     public void finishMissHandlerExecution() {
-        Context solvedMissContext = this.missHandler.getContext();
+        this.solvedMiss(this.missHandler.getContext());
         this.missHandler = null;
-        this.solvedMiss(solvedMissContext);
     }
 
     public boolean isWaitingForReservation() {

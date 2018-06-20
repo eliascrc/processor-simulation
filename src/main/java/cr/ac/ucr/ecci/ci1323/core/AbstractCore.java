@@ -7,6 +7,7 @@ import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
 import cr.ac.ucr.ecci.ci1323.memory.DataBus;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
+import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
 
 import java.util.concurrent.Phaser;
@@ -53,18 +54,25 @@ public abstract class AbstractCore extends Thread {
             int nextInstructionCachePosition = this.calculateCachePosition(nextInstructionBlockNumber, this.coreNumber);
             int nextInstructionCachePositionOffset = this.calculateInstructionOffset();
 
-            Instruction instructionToExecute = this.getInstructionFromCache(nextInstructionBlockNumber,
-                    nextInstructionCachePosition, nextInstructionCachePositionOffset);
-            this.currentContext.incrementPC(SimulationConstants.WORD_SIZE);
-            System.out.println(this.coreNumber);
+            InstructionBlock instructionBlock = this.getInstructionBlockFromCache(nextInstructionBlockNumber,
+                    nextInstructionCachePosition);
 
-            this.executeInstruction(instructionToExecute);
-            this.currentContext.incrementQuantum();
-            this.advanceClockCycle();
+            if (instructionBlock != null) {
+                Instruction instructionToExecute = instructionBlock.getInstruction(nextInstructionCachePositionOffset);
+                this.currentContext.incrementPC(SimulationConstants.WORD_SIZE);
 
-            if(this.currentContext.getCurrentQuantum() >= this.maxQuantum) {
-                this.quantumExpired();
+                this.executeInstruction(instructionToExecute);
+                this.currentContext.incrementQuantum();
+                this.advanceClockCycle();
+
+                if (this.currentContext.getCurrentQuantum() >= this.maxQuantum) {
+                    this.quantumExpired();
+                }
             }
+            else
+                this.advanceClockCycle();
+
+            System.out.println(this.coreNumber);
         }
 
     }
@@ -171,7 +179,7 @@ public abstract class AbstractCore extends Thread {
 
     protected abstract void executeLW(Instruction instruction);
 
-    protected abstract Instruction getInstructionFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition, int nextInstructionCachePositionOffset);
+    protected abstract InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition);
 
     protected void executeDADDI(Instruction instruction) {
         this.getRegisters()[instruction.getField(2)] = this.getRegisters()[instruction.getField(1)]
