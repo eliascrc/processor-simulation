@@ -25,7 +25,7 @@ public class FileParser {
         this.contextQueue = contextQueue;
         this.instructionBus = instructionBus;
         boolean fileExists = true;
-        this.files = new ArrayList<File>();
+        this.files = new ArrayList<>();
         for (int i = 0; fileExists; i++) {
             ClassLoader classLoader = getClass().getClassLoader();
             fileExists = (classLoader.getResource(i + ".txt") != null);
@@ -72,7 +72,7 @@ public class FileParser {
             Context context = new Context(programCounterIndex, contextNumber);
             List<String> newLines = getLinesFromFile(file);
             lines.addAll(newLines);
-            programCounterIndex += 4 * newLines.size();
+                programCounterIndex += SimulationConstants.WORD_SIZE * newLines.size();
             this.contextQueue.pushContext(context);
             contextNumber++;
         }

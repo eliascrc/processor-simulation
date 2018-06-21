@@ -47,6 +47,11 @@ public abstract class AbstractCore extends AbstractThread {
     protected void executeCore() {
 
         while (!this.executionFinished) {
+
+            if (this.currentContext == null) {
+                System.out.println("Hola");
+            }
+
             int nextInstructionBlockNumber = this.calculateInstructionBlockNumber();
             int nextInstructionCachePosition = this.calculateCachePosition(nextInstructionBlockNumber, this.coreNumber);
             int nextInstructionCachePositionOffset = this.calculateInstructionOffset();
@@ -55,16 +60,20 @@ public abstract class AbstractCore extends AbstractThread {
                     nextInstructionCachePosition);
 
             if (instructionBlock != null) {
+                if (instructionBlock.getInstruction(nextInstructionCachePositionOffset) == null) {
+                    instructionBlock.printBlock();
+                    throw new IllegalArgumentException("" + nextInstructionCachePositionOffset);
+                }
                 Instruction instructionToExecute = instructionBlock.getInstruction(nextInstructionCachePositionOffset);
                 this.currentContext.incrementPC(SimulationConstants.WORD_SIZE);
 
                 this.executeInstruction(instructionToExecute);
                 this.currentContext.incrementQuantum();
-                this.advanceClockCycle();
-
                 if (this.currentContext.getCurrentQuantum() >= this.maxQuantum) {
                     this.quantumExpired();
                 }
+                this.advanceClockCycle();
+
             }
             else
                 this.advanceClockCycle();
@@ -133,7 +142,6 @@ public abstract class AbstractCore extends AbstractThread {
         this.simulationBarrier.arriveAndAwaitAdvance();
         this.currentContext.incrementClockCycle();
         this.changeContext();
-        System.out.println("core number:" + this.coreNumber + " context " + this.currentContext.getContextNumber() + " PC: " + this.currentContext.getProgramCounter());
         this.simulationBarrier.arriveAndAwaitAdvance();
     }
 
@@ -148,6 +156,7 @@ public abstract class AbstractCore extends AbstractThread {
         Context nextContext = contextQueue.getNextContext();
         if (nextContext == null) { // checks if there is no other context in the queue
             this.executionFinished = true;
+            System.err.println("Ya termine mama " + this.coreNumber);
         } else { // there is a context waiting in the queue
             this.currentContext = nextContext;
         }

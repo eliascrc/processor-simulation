@@ -57,6 +57,7 @@ public class SimulationController {
         simulationBarrier.register();
 
         this.contextQueue.tryLock();
+        contextQueue.print();
 
         Context nextContext = this.contextQueue.getNextContext();
         nextContext.setOldContext(true);

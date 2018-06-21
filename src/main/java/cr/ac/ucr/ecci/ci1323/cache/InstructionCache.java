@@ -39,7 +39,7 @@ public class InstructionCache {
         return this.instructionCachePositions[position];
     }
 
-    public Bus getInstructionBus() {
+    public InstructionBus getInstructionBus() {
         return instructionBus;
     }
 

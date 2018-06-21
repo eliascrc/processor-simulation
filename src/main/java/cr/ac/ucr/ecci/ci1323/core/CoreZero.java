@@ -26,7 +26,7 @@ public class CoreZero extends AbstractCore {
 
     private volatile int reservedInstructionCachePosition;
 
-    private volatile boolean changeContext;
+    private volatile ContextChange changeContext;
     private boolean waitingForReservation;
 
     public CoreZero(Phaser simulationBarrier, int maxQuantum, Context startingContext,
@@ -37,7 +37,7 @@ public class CoreZero extends AbstractCore {
 
         this.waitingContext = null;
         this.reservedDataCachePosition = this.reservedInstructionCachePosition = -1;
-        this.changeContext = false;
+        this.changeContext = ContextChange.NONE;
     }
 
     @Override
@@ -58,15 +58,19 @@ public class CoreZero extends AbstractCore {
 
             Context nextContext = contextQueue.getNextContext();
             if (nextContext == null) { // checks if there is no other context in the queue
-                if (this.missHandler == null && this.currentContext == null) {
+                if (this.waitingContext == null && missHandler == null) {
                     this.executionFinished = true;
                 } else {
-//                    while (this.missHandler != null || this.currentContext == null) { //
-//                        simulationBarrier.arriveAndAwaitAdvance();
-//                        this.changeContext();
-//                        simulationBarrier.arriveAndAwaitAdvance();
-//                    }
-                    System.out.println("fdsa: " + currentContext.getContextNumber() + " - " + waitingContext.getContextNumber());
+
+                    while (this.waitingContext == null) { //
+                        simulationBarrier.arriveAndAwaitAdvance();
+                        simulationBarrier.arriveAndAwaitAdvance();
+                    }
+
+                    // If it finishes, bring the waiting context
+                    this.changeContext = ContextChange.BRING_WAITING;
+                    this.advanceClockCycle();
+
                 }
 
             } else { // there is a context waiting in the queue
@@ -75,8 +79,6 @@ public class CoreZero extends AbstractCore {
             }
 
             contextQueue.unlock();
-
-
 
         } else { // there is a waiting context in execution
             this.waitingContext.setOldContext(true);
@@ -143,7 +145,7 @@ public class CoreZero extends AbstractCore {
         boolean solvedMiss = true;
         ContextQueue contextQueue = this.simulationController.getContextQueue();
         if (this.waitingContext != null) { // there is a waiting context,
-            this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier ,
+            this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                     nextBlockNumber, nextCachePosition);
             this.currentContext = this.waitingContext;
             this.waitingContext = null;
@@ -194,23 +196,28 @@ public class CoreZero extends AbstractCore {
     }
 
     private void solvedMiss(Context solvedMissContext) {
-        this.changeContext = false;
 
-        if(this.currentContext == null) { // there is no other thread in execution
-            System.out.println("asdf 1");
-            this.currentContext = this.waitingContext;
-        } else {
-            if(this.waitingContext.isOldContext()) { // miss was resolved in old thread
-                System.out.println("asdf 2");
-                this.changeContext = true;
-                /**/
-            } else { // miss was resolved in newer thread
-                if(this.waitingForReservation) { // current thread in execution is in miss
-                    this.changeContext = true;
-                } // current thread in execution is not in miss
-            }
+        if (this.waitingContext == null) {
+            System.out.println("Hola 2");
         }
+
+        if (this.currentContext == null) { // there is no other thread in execution
+            //TODO Pensarlo mejor
+            this.currentContext = this.waitingContext;
+            this.waitingContext = null;
+
+        } else if (this.waitingContext.isOldContext()) // miss was resolved in old thread
+            this.changeContext = ContextChange.SWAP;
+
+        else if (this.waitingForReservation) // current thread in execution is in miss
+            this.changeContext = ContextChange.SWAP;
+
+        else // current thread in execution is not in miss
+            this.changeContext = ContextChange.NONE;
+
+
     }
+
 
     public void finishMissHandlerExecution() {
         this.solvedMiss(this.missHandler.getCurrentContext());
@@ -218,14 +225,20 @@ public class CoreZero extends AbstractCore {
     }
 
     public void changeContext() {
-        if (this.changeContext) {
-            System.out.println("current: " + this.currentContext.getContextNumber() + " waiting: " + this.waitingContext.getContextNumber());
-            Context tempContext = currentContext;
-            this.currentContext = this.waitingContext;
-            this.waitingContext = tempContext;
-            this.changeContext = false;
-            System.out.println("current: " + this.currentContext.getContextNumber() + " waiting: " + this.waitingContext.getContextNumber());
+
+        switch (this.changeContext) {
+            case SWAP:
+                Context tempContext = currentContext;
+                this.currentContext = this.waitingContext;
+                this.waitingContext = tempContext;
+                break;
+            case BRING_WAITING:
+                this.currentContext = this.waitingContext;
+                this.waitingContext = null;
+                break;
         }
+
+        this.changeContext = ContextChange.NONE;
     }
 
     public boolean isWaitingForReservation() {
@@ -236,11 +249,11 @@ public class CoreZero extends AbstractCore {
         this.waitingForReservation = waitingForReservation;
     }
 
-    public boolean isChangeContext() {
+    public ContextChange isChangeContext() {
         return changeContext;
     }
 
-    public void setChangeContext(boolean changeContext) {
+    public void setChangeContext(ContextChange changeContext) {
         this.changeContext = changeContext;
     }
 

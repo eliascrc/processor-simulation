@@ -67,4 +67,9 @@ public class ContextQueue {
         this.contextQueue.add(context);
     }
 
+    public void print() {
+        for (Context context : this.contextQueue) {
+            context.print();
+        }
+    }
 }
