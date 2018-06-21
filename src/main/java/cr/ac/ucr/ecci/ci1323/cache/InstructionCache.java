@@ -1,6 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.cache;
 
 import cr.ac.ucr.ecci.ci1323.core.AbstractCore;
+import cr.ac.ucr.ecci.ci1323.core.AbstractThread;
 import cr.ac.ucr.ecci.ci1323.memory.Bus;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
@@ -47,15 +48,15 @@ public class InstructionCache {
     }
 
     public void getInstructionBlockFromMemory(int nextInstructionBlockNumber, int nextInstructionPositionNumber,
-                                              AbstractCore callingCore) {
+                                              AbstractThread callingThread) {
 
         while (!this.instructionBus.tryLock()) {
-            callingCore.advanceClockCycle();
+            callingThread.advanceClockCycle();
         }
-        callingCore.advanceClockCycle();
+        callingThread.advanceClockCycle();
         // Advances 40 clock cycles
         for (int i = 0; i < 40; i++) {
-            callingCore.advanceClockCycle();
+            callingThread.advanceClockCycle();
         }
 
         this.instructionCachePositions[nextInstructionPositionNumber].setInstructionBlock(

@@ -18,13 +18,10 @@ import java.util.concurrent.Phaser;
  *
  * @author Josué León Sarkis, Elías Calderón, Daniel Montes de Oca
  */
-public abstract class AbstractCore extends Thread {
+public abstract class AbstractCore extends AbstractThread {
 
-    protected Phaser simulationBarrier;
     protected DataCache dataCache;
-
     protected InstructionCache instructionCache;
-    protected Context currentContext;
     protected SimulationController simulationController;
     protected int maxQuantum;
     protected boolean executionFinished;
@@ -34,11 +31,11 @@ public abstract class AbstractCore extends Thread {
                            SimulationController simulationController, int totalCachePositions,
                            InstructionBus instructionBus, DataBus dataBus, int coreNumber) {
 
-        this.simulationBarrier = simulationBarrier;
+        super(simulationBarrier, startingContext);
+
         this.simulationBarrier.register();
         this.maxQuantum = maxQuantum;
         this.simulationController = simulationController;
-        this.currentContext = startingContext;
 
         this.instructionCache = new InstructionCache(instructionBus, totalCachePositions);
         this.dataCache = new DataCache(dataBus, totalCachePositions);
@@ -131,10 +128,11 @@ public abstract class AbstractCore extends Thread {
         this.finishFINExecution();
     }
 
+    @Override
     public void advanceClockCycle() {
         this.simulationBarrier.arriveAndAwaitAdvance();
         this.currentContext.incrementClockCycle();
-        // Por ahora nada mas
+        this.changeContext();
         this.simulationBarrier.arriveAndAwaitAdvance();
     }
 
@@ -181,6 +179,8 @@ public abstract class AbstractCore extends Thread {
     protected abstract void executeSW(Instruction instruction);
 
     protected abstract void executeLW(Instruction instruction);
+
+    protected abstract void changeContext();
 
     protected abstract InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition);
 

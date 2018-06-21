@@ -6,21 +6,18 @@ import cr.ac.ucr.ecci.ci1323.context.Context;
 
 import java.util.concurrent.Phaser;
 
-public class MissHandler extends Thread {
+public class MissHandler extends AbstractThread {
 
     private CoreZero coreZero;
-    private Context context;
     private MissType missType;
-    private Phaser simulationBarrier;
     private int nextCachePosition;
     private int nextBlockNumber;
 
     MissHandler(CoreZero coreZero, Context context, MissType missType, Phaser simulationBarrier, int nextBlockNumber,
                 int nextCachePosition) {
+        super(simulationBarrier, context);
         this.coreZero = coreZero;
-        this.context = context;
         this.missType = missType;
-        this.simulationBarrier = simulationBarrier;
         this.simulationBarrier.register();
         this.nextCachePosition = nextCachePosition;
         this.nextBlockNumber = nextBlockNumber;
@@ -47,22 +44,14 @@ public class MissHandler extends Thread {
         // there is no other cache position reserved
         this.coreZero.setReservedInstructionCachePosition(this.nextCachePosition);
         this.coreZero.getInstructionCache().getInstructionBlockFromMemory(this.nextBlockNumber,
-                this.nextCachePosition, this.coreZero);
+                this.nextCachePosition, this);
         this.coreZero.setReservedInstructionCachePosition(-1);
-        this.coreZero.setWaitingContext(this.context);
+        this.coreZero.setWaitingContext(this.currentContext);
         this.coreZero.finishMissHandlerExecution();
-    }
-
-    public Context getContext() {
-        return context;
     }
 
     public void setCoreZero(CoreZero coreZero) {
         this.coreZero = coreZero;
-    }
-
-    public void setContext(Context context) {
-        this.context = context;
     }
 
     public void setMissType(MissType missType) {

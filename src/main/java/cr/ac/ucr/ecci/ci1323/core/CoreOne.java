@@ -52,4 +52,8 @@ public class CoreOne extends AbstractCore {
 
         return instructionCachePosition.getInstructionBlock();
     }
+
+    public void changeContext() {
+
+    }
 }

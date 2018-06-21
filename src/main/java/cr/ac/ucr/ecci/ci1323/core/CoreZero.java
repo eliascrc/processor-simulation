@@ -174,10 +174,7 @@ public class CoreZero extends AbstractCore {
         } else {
             if(this.waitingContext.isOldContext()) { // miss was resolved in old thread
                 this.changeContext = true;
-                /*if(this.changeContext) {
-                    this.waitingContext = this.currentContext;
-                    this.currentContext = this.waitingContext;
-                }*/
+                /**/
             } else { // miss was resolved in newer thread
                 if(this.waitingForReservation) { // current thread in execution is in miss
                     this.changeContext = true;
@@ -187,8 +184,16 @@ public class CoreZero extends AbstractCore {
     }
 
     public void finishMissHandlerExecution() {
-        this.solvedMiss(this.missHandler.getContext());
+        this.solvedMiss(this.missHandler.getCurrentContext());
         this.missHandler = null;
+    }
+
+    public void changeContext() {
+        if (this.changeContext) {
+            Context tempContext = currentContext;
+            this.currentContext = this.waitingContext;
+            this.waitingContext = tempContext;
+        }
     }
 
     public boolean isWaitingForReservation() {
