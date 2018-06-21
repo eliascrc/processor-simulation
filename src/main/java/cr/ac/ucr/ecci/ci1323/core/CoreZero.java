@@ -57,14 +57,26 @@ public class CoreZero extends AbstractCore {
             }
 
             Context nextContext = contextQueue.getNextContext();
-            if (nextContext == null && currentContext == null && missHandler == null) { // checks if there is no other context in the queue
-                this.executionFinished = true;
+            if (nextContext == null) { // checks if there is no other context in the queue
+                if (this.missHandler == null && this.currentContext == null) {
+                    this.executionFinished = true;
+                } else {
+//                    while (this.missHandler != null || this.currentContext == null) { //
+//                        simulationBarrier.arriveAndAwaitAdvance();
+//                        this.changeContext();
+//                        simulationBarrier.arriveAndAwaitAdvance();
+//                    }
+                    System.out.println("fdsa: " + currentContext.getContextNumber() + " - " + waitingContext.getContextNumber());
+                }
+
             } else { // there is a context waiting in the queue
                 System.out.println("cc: " + currentContext.getContextNumber() + " mh: " + missHandler.getCurrentContext().getContextNumber());
                 this.currentContext = nextContext;
             }
 
             contextQueue.unlock();
+
+
 
         } else { // there is a waiting context in execution
             this.waitingContext.setOldContext(true);
@@ -185,16 +197,15 @@ public class CoreZero extends AbstractCore {
         this.changeContext = false;
 
         if(this.currentContext == null) { // there is no other thread in execution
-            System.out.println("1");
+            System.out.println("asdf 1");
             this.currentContext = this.waitingContext;
         } else {
             if(this.waitingContext.isOldContext()) { // miss was resolved in old thread
-                System.out.println("2");
+                System.out.println("asdf 2");
                 this.changeContext = true;
                 /**/
             } else { // miss was resolved in newer thread
                 if(this.waitingForReservation) { // current thread in execution is in miss
-                    System.out.println("3");
                     this.changeContext = true;
                 } // current thread in execution is not in miss
             }
