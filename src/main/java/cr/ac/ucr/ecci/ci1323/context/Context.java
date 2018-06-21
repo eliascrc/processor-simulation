@@ -128,4 +128,12 @@ public class Context {
     public void setFinishingCore(int finishingCore) {
         this.finishingCore = finishingCore;
     }
+
+    public int getContextNumber() {
+        return contextNumber;
+    }
+
+    public void setContextNumber(int contextNumber) {
+        this.contextNumber = contextNumber;
+    }
 }

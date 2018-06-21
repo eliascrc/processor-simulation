@@ -47,6 +47,7 @@ public class MissHandler extends AbstractThread {
                 this.nextCachePosition, this);
         this.coreZero.setReservedInstructionCachePosition(-1);
         this.coreZero.setWaitingContext(this.currentContext);
+        System.out.println("MH:" + this.currentContext.getContextNumber());
         this.coreZero.finishMissHandlerExecution();
     }
 

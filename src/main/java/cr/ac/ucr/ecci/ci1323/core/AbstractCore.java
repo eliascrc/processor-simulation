@@ -69,7 +69,6 @@ public abstract class AbstractCore extends AbstractThread {
             else
                 this.advanceClockCycle();
 
-            System.out.println(this.coreNumber);
         }
 
         this.simulationBarrier.arriveAndDeregister();
@@ -124,6 +123,7 @@ public abstract class AbstractCore extends AbstractThread {
         this.currentContext.incrementQuantum();
         this.currentContext.setFinishingCore(this.coreNumber);
         this.advanceClockCycle();
+        System.out.println("finished: " + this.currentContext.getContextNumber());
         this.simulationController.addFinishedThread(this.currentContext);
         this.finishFINExecution();
     }
@@ -133,6 +133,7 @@ public abstract class AbstractCore extends AbstractThread {
         this.simulationBarrier.arriveAndAwaitAdvance();
         this.currentContext.incrementClockCycle();
         this.changeContext();
+        System.out.println("core number:" + this.coreNumber + " context " + this.currentContext.getContextNumber() + " PC: " + this.currentContext.getProgramCounter());
         this.simulationBarrier.arriveAndAwaitAdvance();
     }
 
