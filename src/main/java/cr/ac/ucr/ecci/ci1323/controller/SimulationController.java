@@ -29,12 +29,14 @@ public class SimulationController {
     private volatile DataBus dataBus;
     private CoreOne coreZero;
     private CoreOne coreOne;
+    private int simulationTicks;
 
     public SimulationController() {
         this.contextQueue = new ContextQueue();
         this.finishedContexts = new ArrayList<>();
         this.instructionBus = new InstructionBus(new InstructionBlock[SimulationConstants.TOTAL_INSTRUCTION_BLOCKS]);
         this.dataBus = new DataBus(new DataBlock[SimulationConstants.TOTAL_DATA_BLOCKS]);
+        this.simulationTicks = 0;
     }
 
     private void parseContextFile () {
@@ -79,6 +81,7 @@ public class SimulationController {
 
         while (simulationBarrier.getRegisteredParties() > 1) {
             simulationBarrier.arriveAndAwaitAdvance();
+            this.simulationTicks++;
             simulationBarrier.arriveAndAwaitAdvance();
         }
 
