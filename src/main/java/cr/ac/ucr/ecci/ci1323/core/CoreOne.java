@@ -1,5 +1,6 @@
 package cr.ac.ucr.ecci.ci1323.core;
 
+import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
 import cr.ac.ucr.ecci.ci1323.cache.InstructionCachePosition;
 import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
@@ -38,8 +39,33 @@ public class CoreOne extends AbstractCore {
 
     @Override
     protected void executeLW(Instruction instruction) {
+        super.executeLW(instruction);
 
     }
+
+    @Override
+    protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset) {
+        if (!this.dataCache.getDataBus().tryLock()) {
+            dataCachePosition.unlock();
+            this.advanceClockCycle();
+            return false;
+        }
+
+        this.advanceClockCycle();
+        if ()
+
+        return true;
+
+    }
+
+    @Override
+    protected void blockDataCachePosition(int dataCachePosition) {
+        DataCachePosition cachePosition = this.dataCache.getDataCachePosition(dataCachePosition);
+        while (!cachePosition.tryLock()) {
+            this.advanceClockCycle();
+        }
+    }
+
 
     @Override
     protected InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition) {

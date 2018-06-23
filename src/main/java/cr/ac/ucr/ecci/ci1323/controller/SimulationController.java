@@ -27,7 +27,7 @@ public class SimulationController {
     private volatile ArrayList<Context> finishedContexts;
     private volatile InstructionBus instructionBus;
     private volatile DataBus dataBus;
-    private CoreZero coreZero;
+    private CoreOne coreZero;
     private CoreOne coreOne;
 
     public SimulationController() {
@@ -61,8 +61,8 @@ public class SimulationController {
 
         Context nextContext = this.contextQueue.getNextContext();
         nextContext.setOldContext(true);
-        this.coreZero = new CoreZero(simulationBarrier, maxQuantum, nextContext, this,
-                this.instructionBus, this.dataBus,0);
+        this.coreZero = new CoreOne(simulationBarrier, maxQuantum, nextContext, this,
+                this.instructionBus, this.dataBus,2);
 
         nextContext = this.contextQueue.getNextContext();
         nextContext.setOldContext(false);
