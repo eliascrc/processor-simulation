@@ -18,7 +18,7 @@ public class SimulationConstants {
     public static final int INSTRUCTIONS_PER_BLOCK = 4;
     public static final int BLOCK_SIZE = 16;
     public static final int WORD_SIZE = 4;
-    public static final int TOTAL_DATA_BLOCK_WORDS = 4;
+    public static final int WORDS_PER_DATA_BLOCK = 4;
     public static final int TOTAL_CORE_CERO_CACHE_POSITIONS = 8;
     public static final int TOTAL_FIRST_CORE_CACHE_POSITIONS = 4;
 

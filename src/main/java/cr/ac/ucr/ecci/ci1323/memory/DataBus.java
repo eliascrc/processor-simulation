@@ -2,6 +2,7 @@ package cr.ac.ucr.ecci.ci1323.memory;
 
 import cr.ac.ucr.ecci.ci1323.cache.DataCache;
 import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
+import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 
 public class DataBus extends Bus {
 
@@ -26,6 +27,15 @@ public class DataBus extends Bus {
 
     public DataBlock getMemoryBlock(int index) {
         return this.dataMemory[index];
+    }
+
+    public void writeBlockToMemory(DataBlock newDataBlock, int tag) {
+
+        DataBlock dataBlock = this.dataMemory[tag];
+        for (int i = 0; i < SimulationConstants.WORDS_PER_DATA_BLOCK; i++) {
+            dataBlock.getWords()[i] = newDataBlock.getWords()[i];
+        }
+
     }
 
     public int getMemoryBlockData(int blockNumber, int offset) {
