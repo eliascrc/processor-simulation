@@ -1,9 +1,9 @@
 package cr.ac.ucr.ecci.ci1323.core;
 
+import cr.ac.ucr.ecci.ci1323.cache.CachePositionState;
 import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
 import cr.ac.ucr.ecci.ci1323.cache.InstructionCachePosition;
 import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
-import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
 import cr.ac.ucr.ecci.ci1323.context.Context;
 import cr.ac.ucr.ecci.ci1323.memory.DataBus;
@@ -45,14 +45,39 @@ public class CoreOne extends AbstractCore {
 
     @Override
     protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset) {
-        if (!this.dataCache.getDataBus().tryLock()) {
+
+        DataBus dataBus = this.dataCache.getDataBus();
+
+        if (!dataBus.tryLock()) {
             dataCachePosition.unlock();
             this.advanceClockCycle();
             return false;
         }
 
         this.advanceClockCycle();
-        if ()
+        if (dataCachePosition.getTag() != blockNumber && dataCachePosition.getState() == CachePositionState.MODIFIED) {
+            this.dataCache.writeBlockToMemory(dataCachePosition, this);
+
+        }
+
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
+        DataCachePosition otherDataCachePosition = dataBus.getCachePosition(0, otherDataCachePositionNumber);
+
+        while (!otherDataCachePosition.tryLock()) {
+            this.advanceClockCycle();
+        }
+        this.advanceClockCycle();
+
+        if (otherDataCachePosition.getTag() == blockNumber && otherDataCachePosition.getState() == CachePositionState.MODIFIED) {
+            this.dataCache.writeBlockToMemory(otherDataCachePosition, this);
+            dataCachePosition.setDataBlock(otherDataCachePosition.getDataBlock().clone());
+            otherDataCachePosition.setState(CachePositionState.SHARED);
+        } else {
+            int dataCachePositionNumber = this.calculateCachePosition(blockNumber, positionOffset);
+            this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, this);
+        }
+
+        otherDataCachePosition.unlock();
 
         return true;
 

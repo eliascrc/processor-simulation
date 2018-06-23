@@ -1,5 +1,6 @@
 package cr.ac.ucr.ecci.ci1323.core;
 
+import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
 import cr.ac.ucr.ecci.ci1323.cache.InstructionCachePosition;
 import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
@@ -94,6 +95,16 @@ public class CoreZero extends AbstractCore {
 
     @Override
     protected void executeLW(Instruction instruction) {
+
+    }
+
+    @Override
+    protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset) {
+        return false;
+    }
+
+    @Override
+    protected void blockDataCachePosition(int dataCachePosition) {
 
     }
 

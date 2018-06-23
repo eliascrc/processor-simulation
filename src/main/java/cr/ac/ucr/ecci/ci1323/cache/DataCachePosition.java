@@ -62,11 +62,11 @@ public class DataCachePosition {
         this.cachePositionLock = cachePositionLock;
     }
 
-    public CachePositionState getCachePositionState() {
+    public CachePositionState getState() {
         return cachePositionState;
     }
 
-    public void setCachePositionState(CachePositionState cachePositionState) {
+    public void setState(CachePositionState cachePositionState) {
         this.cachePositionState = cachePositionState;
     }
 }

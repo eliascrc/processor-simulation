@@ -30,5 +30,4 @@ public abstract class Bus {
 
         this.busLock.unlock();
     }
-
 }

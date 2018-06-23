@@ -1,6 +1,6 @@
 package cr.ac.ucr.ecci.ci1323.cache;
 
-import cr.ac.ucr.ecci.ci1323.memory.Bus;
+import cr.ac.ucr.ecci.ci1323.core.AbstractThread;
 import cr.ac.ucr.ecci.ci1323.memory.DataBus;
 
 /**
@@ -29,6 +29,26 @@ public class DataCache {
         this.dataBus = dataBus;
     }
 
+    public void writeBlockToMemory (DataCachePosition dataCachePosition, AbstractThread callingThread) {
+
+        // Advances 40 clock cycles
+        for (int i = 0; i < 40; i++) {
+            callingThread.advanceClockCycle();
+        }
+
+        this.getDataBus().writeBlockToMemory(dataCachePosition.getDataBlock(), dataCachePosition.getTag());
+        dataCachePosition.setState(CachePositionState.INVALID);
+
+    }
+
+    public void getBlockFromMemory(int dataBlockNumber, int dataPositionNumber, AbstractThread callingThread) {
+
+        this.dataCachePositions[dataPositionNumber].setDataBlock(
+                this.dataBus.getMemoryBlock(dataBlockNumber).clone());
+        this.dataCachePositions[dataPositionNumber].setState(CachePositionState.SHARED);
+        this.dataBus.unlock();
+    }
+
     public DataCachePosition[] getDataCachePositions() {
         return dataCachePositions;
     }
@@ -41,7 +61,7 @@ public class DataCache {
         return this.dataCachePositions[position];
     }
 
-    public Bus getDataBus() {
+    public DataBus getDataBus() {
         return dataBus;
     }
 

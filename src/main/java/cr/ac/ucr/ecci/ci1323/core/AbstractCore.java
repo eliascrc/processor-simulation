@@ -201,7 +201,7 @@ public abstract class AbstractCore extends AbstractThread {
         while (!solvedMiss) {
             this.blockDataCachePosition(dataCachePositionNumber);
 
-            if (dataCachePosition.getTag() != blockNumber || dataCachePosition.getCachePositionState() == CachePositionState.INVALID) {
+            if (dataCachePosition.getTag() != blockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
                 solvedMiss = this.handleLoadMiss(blockNumber, dataCachePosition, dataCachePositionOffset);
 
             } else { // Hit
@@ -295,7 +295,7 @@ public abstract class AbstractCore extends AbstractThread {
     protected int calculateDataOffset(Instruction instruction) {
         int sourceRegister = this.currentContext.getRegisters()[instruction.getInstructionFields()[1]];
         int immediate = instruction.getInstructionFields()[3];
-        int offset = ((sourceRegister + immediate) % SimulationConstants.BLOCK_SIZE) / SimulationConstants.TOTAL_DATA_BLOCK_WORDS;
+        int offset = ((sourceRegister + immediate) % SimulationConstants.BLOCK_SIZE) / SimulationConstants.WORDS_PER_DATA_BLOCK;
         return offset;
     }
 
@@ -317,11 +317,10 @@ public abstract class AbstractCore extends AbstractThread {
      * Calculates the data cache position for a data block in the other core cache.
      *
      * @param blockNumber
-     * @param coreNumber
      * @return
      */
-    protected int calculateDataOtherCachePosition(int blockNumber, int coreNumber) {
-        if (coreNumber == 0) {
+    protected int calculateOtherDataCachePosition(int blockNumber) {
+        if (this.coreNumber == 0) {
             return blockNumber % SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS;
         }
         return blockNumber % SimulationConstants.TOTAL_CORE_CERO_CACHE_POSITIONS;
