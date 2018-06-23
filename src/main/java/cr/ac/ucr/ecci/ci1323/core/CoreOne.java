@@ -1,5 +1,6 @@
 package cr.ac.ucr.ecci.ci1323.core;
 
+import cr.ac.ucr.ecci.ci1323.cache.CachePositionState;
 import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
 import cr.ac.ucr.ecci.ci1323.cache.InstructionCachePosition;
 import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
@@ -56,6 +57,24 @@ public class CoreOne extends AbstractCore {
 
         return true;
 
+    }
+
+    @Override
+    protected boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
+        if (dataCachePosition.getCachePositionState() == CachePositionState.MODIFIED) {
+            dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+            return true;
+        }
+
+        // dataCachePosition is shared
+        if (!this.dataCache.getDataBus().tryLock()) {
+            dataCachePosition.unlock();
+            return false;
+        }
+
+        while ()
+
+        return true;
     }
 
     @Override
