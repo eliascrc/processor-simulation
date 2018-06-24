@@ -213,6 +213,10 @@ public abstract class AbstractCore extends AbstractThread {
 
     protected abstract boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister);
 
+    protected abstract boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value);
+
+    protected abstract boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value);
+
     protected abstract void blockDataCachePosition(int dataCachePosition);
 
     protected abstract void changeContext();

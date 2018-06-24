@@ -61,7 +61,7 @@ public class CoreOne extends AbstractCore {
         }
 
         int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
-        DataCachePosition otherDataCachePosition = dataBus.getCachePosition(0, otherDataCachePositionNumber);
+        DataCachePosition otherDataCachePosition = dataBus.getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
 
         while (!otherDataCachePosition.tryLock()) {
             this.advanceClockCycle();
@@ -80,6 +80,93 @@ public class CoreOne extends AbstractCore {
         this.currentContext.getRegisters()[finalRegister] = dataCachePosition.getDataBlock().getWord(positionOffset);
         dataBus.unlock();
         dataCachePosition.unlock();
+        return true;
+    }
+
+    @Override
+    protected boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
+        if (dataCachePosition.getState() == CachePositionState.MODIFIED) {
+            dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+            return true;
+        }
+
+        // dataCachePosition is shared
+        DataBus dataBus = this.dataCache.getDataBus();
+        if (!dataBus.tryLock()) {
+            this.advanceClockCycle();
+            dataCachePosition.unlock();
+            return false;
+        }
+
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
+        DataCachePosition otherCachePosition = dataBus
+                .getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
+        while (!otherCachePosition.tryLock()) {
+            this.advanceClockCycle();
+        }
+        this.advanceClockCycle();
+
+        if (otherCachePosition.getTag() == blockNumber && otherCachePosition.getState() != CachePositionState.INVALID)
+            otherCachePosition.setState(CachePositionState.INVALID);
+
+        dataCachePosition.setState(CachePositionState.MODIFIED);
+        dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+        otherCachePosition.unlock();
+        dataBus.unlock();
+        dataCachePosition.unlock();
+
+        return true;
+    }
+
+    @Override
+    protected boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
+        DataBus dataBus = this.dataCache.getDataBus();
+
+        if (!dataBus.tryLock()) {
+            dataCachePosition.unlock();
+            this.advanceClockCycle();
+            return false;
+        }
+
+        this.advanceClockCycle();
+        if (dataCachePosition.getTag() != blockNumber && dataCachePosition.getState() == CachePositionState.MODIFIED) {
+            this.dataCache.writeBlockToMemory(dataCachePosition, this);
+            dataCachePosition.setState(CachePositionState.SHARED);
+        }
+
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
+        DataCachePosition otherDataCachePosition = dataBus
+                .getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
+        while (!otherDataCachePosition.tryLock()) {
+            this.advanceClockCycle();
+        }
+        this.advanceClockCycle();
+
+        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, positionOffset);
+        if (otherDataCachePosition.getTag() == blockNumber || otherDataCachePosition.getState() == CachePositionState.INVALID) {
+            this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, this);
+            dataCachePosition.setState(CachePositionState.MODIFIED);
+        }
+        switch (otherDataCachePosition.getState()) {
+            case MODIFIED:
+                otherDataCachePosition.setState(CachePositionState.INVALID);
+                dataBus.writeBlockToMemory(otherDataCachePosition.getDataBlock(), otherDataCachePosition.getTag());
+                dataCachePosition.setDataBlock(otherDataCachePosition.getDataBlock().clone());
+                dataCachePosition.setState(CachePositionState.MODIFIED);
+                break;
+
+            case SHARED:
+                otherDataCachePosition.setState(CachePositionState.INVALID);
+                dataCachePosition.setDataBlock(dataBus.getMemoryBlock(blockNumber).clone());
+                dataCachePosition.setState(CachePositionState.MODIFIED);
+                break;
+        }
+
+        dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+        otherDataCachePosition.unlock();
+        dataBus.unlock();
+        dataCachePosition.unlock();
+
         return true;
     }
 

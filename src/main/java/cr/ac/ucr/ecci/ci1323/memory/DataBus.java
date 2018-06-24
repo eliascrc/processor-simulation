@@ -15,10 +15,10 @@ public class DataBus extends Bus {
         this.dataMemory = dataMemory;
     }
 
-    public DataCachePosition getCachePosition(int coreNum, int position) {
-        if (coreNum == 0) {
+    public DataCachePosition getOtherCachePosition(int coreNum, int position) {
+        if (coreNum == 1) {
             return this.coreZeroCache.getDataCachePositions()[position];
-        } else if (coreNum == 1) {
+        } else if (coreNum == 0) {
             return this.coreOneCache.getDataCachePositions()[position];
         } else {
             throw new IllegalArgumentException("Invalid core number: " + coreNum);
