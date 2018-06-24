@@ -2,6 +2,8 @@ package cr.ac.ucr.ecci.ci1323.cache;
 
 import cr.ac.ucr.ecci.ci1323.core.AbstractCore;
 import cr.ac.ucr.ecci.ci1323.core.AbstractThread;
+import cr.ac.ucr.ecci.ci1323.core.CoreZero;
+import cr.ac.ucr.ecci.ci1323.core.MissHandler;
 import cr.ac.ucr.ecci.ci1323.memory.Bus;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
@@ -52,7 +54,8 @@ public class InstructionCache {
 
         while (!this.instructionBus.tryLock()) {
             System.out.println(callingThread.getSimulationBarrier().getRegisteredParties());
-            System.out.println("aaaaaaa");
+            if (callingThread instanceof MissHandler) System.out.println("yup");
+            else System.out.println("noup");
             callingThread.advanceClockCycle();
         }
         callingThread.advanceClockCycle();

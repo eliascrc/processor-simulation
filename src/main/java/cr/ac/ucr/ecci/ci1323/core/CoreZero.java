@@ -90,10 +90,12 @@ public class CoreZero extends AbstractCore {
 
     }
 
-    /*@Override
-    protected void executeLW(Instruction instruction) {
-        System.out.println("Core zero load");
-    }*/
+    @Override
+    public void printContext() {
+        super.printContext();
+        System.out.println("MH = " + missHandler + ", WC = " + waitingContext);
+        System.out.println("RP = " + reservedDataCachePosition + ", RIP = " + reservedInstructionCachePosition);
+    }
 
     @Override
     protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
@@ -123,6 +125,7 @@ public class CoreZero extends AbstractCore {
 
     @Override
     protected void quantumExpired() {
+        System.out.println(currentContext.getContextNumber() + " se acabo el quantum");
         if (this.waitingContext == null && this.missHandler == null) { // checks if there is no other context waiting in execution
             super.quantumExpired();
 
@@ -134,9 +137,9 @@ public class CoreZero extends AbstractCore {
                 this.advanceClockCycle();
             }
 
+
             while (this.waitingContext == null) {
-                simulationBarrier.arriveAndAwaitAdvance();
-                simulationBarrier.arriveAndAwaitAdvance();
+                this.advanceClockCycle();
             }
 
             contextQueue.pushContext(this.currentContext);
@@ -158,15 +161,15 @@ public class CoreZero extends AbstractCore {
             nextInstructionBlockNumber = this.calculateInstructionBlockNumber();
             nextInstructionCachePosition = this.calculateCachePosition(nextInstructionBlockNumber, this.coreNumber);
 
-            while (this.reservedInstructionCachePosition == nextInstructionBlockNumber) {
+            while (this.reservedInstructionCachePosition == nextInstructionCachePosition) {
                 this.advanceClockCycle();
             }
 
-            //System.out.println("prueba 2");
             InstructionCachePosition instructionCachePosition = this.instructionCache
                     .getInstructionCachePosition(nextInstructionCachePosition);
 
             if (instructionCachePosition.getTag() != nextInstructionBlockNumber) { // miss
+                System.out.println("Hubo miss");
                 solvedMiss = this.enterCacheMiss(MissType.INSTRUCTION, nextInstructionBlockNumber,
                         nextInstructionCachePosition, null, -1, -1);
             } else {
@@ -179,15 +182,17 @@ public class CoreZero extends AbstractCore {
 
     private boolean enterCacheMiss(MissType missType, int nextBlockNumber, int nextCachePosition, DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
         boolean solvedMiss = true;
-        //System.out.println("prueba 2");
+
         ContextQueue contextQueue = this.simulationController.getContextQueue();
         if (this.waitingContext != null) { // there is a waiting context,
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                     nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
-            this.currentContext = this.waitingContext;
-            this.setWaitingContext(null);
-            this.setChangeContext(ContextChange.NONE);
+            this.changeContext = ContextChange.BRING_WAITING;
+            this.advanceClockCycleChangingContext();
             this.missHandler.start();
+
+            if (missType == MissType.INSTRUCTION)
+                solvedMiss = false;
 
         } else if (this.missHandler != null) { // miss handler is running, must try to solve by itself
             solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
@@ -196,18 +201,21 @@ public class CoreZero extends AbstractCore {
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                     nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
 
-            System.out.println(contextQueue.size());
-
             while (!contextQueue.tryLock())
                 this.advanceClockCycle();
 
             Context nextContext = contextQueue.getNextContext();
             if (nextContext != null) {
+                System.out.println("NC NOT NULL");
                 nextContext.setOldContext(false);
                 this.currentContext = nextContext;
                 this.missHandler.start();
 
+                if (missType == MissType.INSTRUCTION)
+                    solvedMiss = false;
+
             } else {
+                System.out.println("NC NULL");
                 this.missHandler = null;
                 solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
             }
@@ -233,10 +241,7 @@ public class CoreZero extends AbstractCore {
 
     public boolean solveDataLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister, AbstractThread callingThread) {
         if(this.getReservedDataCachePosition() != -1) {
-            if (callingThread instanceof CoreZero)
-                ((CoreZero)callingThread).advanceClockCycleChangingContext();
-            else
-                callingThread.advanceClockCycle();
+            System.out.println("Niet");
             return false;
         } else {
             this.setReservedDataCachePosition(dataCachePositionNumber);
@@ -245,10 +250,7 @@ public class CoreZero extends AbstractCore {
         DataBus dataBus = this.dataCache.getDataBus();
 
         if (!dataBus.tryLock()) {
-            if (callingThread instanceof CoreZero)
-                ((CoreZero)callingThread).advanceClockCycleChangingContext();
-            else
-                callingThread.advanceClockCycle();
+            callingThread.advanceClockCycle();
             return false;
         }
 
@@ -290,7 +292,7 @@ public class CoreZero extends AbstractCore {
             return true;
         }
 
-        this.advanceClockCycleChangingContext();
+        this.advanceClockCycle();
         return false;
     }
 
