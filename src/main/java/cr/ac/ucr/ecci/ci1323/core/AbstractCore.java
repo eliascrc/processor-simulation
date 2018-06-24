@@ -224,11 +224,43 @@ public abstract class AbstractCore extends AbstractThread {
         }
     }
 
+    protected boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
+        if (dataCachePosition.getState() == CachePositionState.MODIFIED) {
+            dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+            return true;
+        }
+
+        // dataCachePosition is shared
+        DataBus dataBus = this.dataCache.getDataBus();
+        if (!dataBus.tryLock()) {
+            this.advanceClockCycle();
+            dataCachePosition.unlock();
+            return false;
+        }
+
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
+        DataCachePosition otherCachePosition = dataBus
+                .getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
+        while (!otherCachePosition.tryLock()) {
+            this.advanceClockCycle();
+        }
+        this.advanceClockCycle();
+
+        if (otherCachePosition.getTag() == blockNumber && otherCachePosition.getState() != CachePositionState.INVALID)
+            otherCachePosition.setState(CachePositionState.INVALID);
+
+        dataCachePosition.setState(CachePositionState.MODIFIED);
+        dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+        otherCachePosition.unlock();
+        dataBus.unlock();
+        dataCachePosition.unlock();
+
+        return true;
+    }
+
     protected abstract boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister);
 
     protected abstract boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value);
-
-    protected abstract boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value);
 
     protected abstract void blockDataCachePosition(int dataCachePosition);
 
