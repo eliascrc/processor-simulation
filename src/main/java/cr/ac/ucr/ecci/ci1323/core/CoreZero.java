@@ -22,7 +22,7 @@ import java.util.concurrent.Phaser;
 public class CoreZero extends AbstractCore {
 
     private MissHandler missHandler;
-    private Context waitingContext;
+    private volatile Context waitingContext;
 
     private volatile int reservedDataCachePosition;
 
@@ -64,28 +64,24 @@ public class CoreZero extends AbstractCore {
                     this.executionFinished = true;
                 } else {
 
-                    while (this.waitingContext == null) { //
+                    while (this.waitingContext == null) {
                         simulationBarrier.arriveAndAwaitAdvance();
                         simulationBarrier.arriveAndAwaitAdvance();
                     }
 
                     // If it finishes, bring the waiting context
-                    this.changeContext = ContextChange.BRING_WAITING;
-                    this.advanceClockCycle();
+                    this.setChangeContext(ContextChange.BRING_WAITING);
 
                 }
 
             } else { // there is a context waiting in the queue
-                System.out.println("cc: " + currentContext.getContextNumber() + " mh: " + missHandler.getCurrentContext().getContextNumber());
                 this.currentContext = nextContext;
             }
 
             contextQueue.unlock();
 
         } else { // there is a waiting context in execution
-            this.waitingContext.setOldContext(true);
-            this.currentContext = this.waitingContext;
-            this.waitingContext = null;
+            this.setChangeContext(ContextChange.BRING_WAITING);
         }
     }
 
@@ -127,23 +123,31 @@ public class CoreZero extends AbstractCore {
 
     @Override
     protected void quantumExpired() {
-        if (this.waitingContext == null) { // checks if there is no other context waiting in execution
-
+        if (this.waitingContext == null && this.missHandler == null) { // checks if there is no other context waiting in execution
             super.quantumExpired();
 
-        } else { // there is a waiting context in execution
+        } else { // there is someone else waiting in execution
             ContextQueue contextQueue = this.simulationController.getContextQueue();
 
             // Tries to lock the context queue
             while (!contextQueue.tryLock()) {
                 this.advanceClockCycle();
             }
-            this.currentContext.setOldContext(false);
+
+            while (this.waitingContext == null) {
+                simulationBarrier.arriveAndAwaitAdvance();
+                simulationBarrier.arriveAndAwaitAdvance();
+            }
+
             contextQueue.pushContext(this.currentContext);
             contextQueue.unlock();
 
-            this.currentContext = this.waitingContext;
-            this.waitingContext = null;
+            this.currentContext.setOldContext(false);
+            this.waitingContext.setOldContext(true);
+
+            this.setChangeContext(ContextChange.BRING_WAITING);
+            this.advanceClockCycle();
+
         }
     }
 
@@ -151,7 +155,10 @@ public class CoreZero extends AbstractCore {
     protected InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition) {
         boolean solvedMiss = false;
         while (!solvedMiss) {
-            while (this.reservedInstructionCachePosition != -1) {
+            nextInstructionBlockNumber = this.calculateInstructionBlockNumber();
+            nextInstructionCachePosition = this.calculateCachePosition(nextInstructionBlockNumber, this.coreNumber);
+            System.out.println("wtf");
+            while (this.reservedInstructionCachePosition == nextInstructionBlockNumber) {
                 this.advanceClockCycle();
             }
 
@@ -172,15 +179,18 @@ public class CoreZero extends AbstractCore {
     private boolean enterCacheMiss(MissType missType, int nextBlockNumber, int nextCachePosition, DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
         boolean solvedMiss = true;
         ContextQueue contextQueue = this.simulationController.getContextQueue();
+
         if (this.waitingContext != null) { // there is a waiting context,
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                     nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
             this.currentContext = this.waitingContext;
-            this.waitingContext = null;
+            this.setWaitingContext(null);
+            this.setChangeContext(ContextChange.NONE);
             this.missHandler.start();
 
         } else if (this.missHandler != null) { // miss handler is running, must try to solve by itself
             solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
+
         } else { // miss handler is not running and there is no waiting context
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                     nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
@@ -193,7 +203,12 @@ public class CoreZero extends AbstractCore {
                 nextContext.setOldContext(false);
                 this.currentContext = nextContext;
                 this.missHandler.start();
+
+            } else {
+                this.missHandler = null;
+                solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
             }
+
             contextQueue.unlock();
         }
 
@@ -258,37 +273,20 @@ public class CoreZero extends AbstractCore {
 
     public boolean solveInstructionMissLocally(int nextBlockNumber, int nextCachePosition) {
         if (this.reservedInstructionCachePosition == -1) { // there is no other cache position reserved
-            this.waitingForReservation = false;
-            this.reservedInstructionCachePosition = nextCachePosition;
+            this.setReservedInstructionCachePosition(nextCachePosition);
             this.instructionCache.getInstructionBlockFromMemory(nextBlockNumber, nextCachePosition, this);
-            this.reservedInstructionCachePosition = -1;
+            this.setReservedInstructionCachePosition(-1);
             return true;
         }
 
-        this.waitingForReservation = true;
+        this.advanceClockCycle();
         return false;
     }
 
     private void solvedMiss(Context solvedMissContext) {
 
-        if (this.waitingContext == null) {
-            System.out.println("Hola 2");
-        }
-
-        if (this.currentContext == null) { // there is no other thread in execution
-            //TODO Pensarlo mejor
-            this.currentContext = this.waitingContext;
-            this.waitingContext = null;
-
-        } else if (this.waitingContext.isOldContext()) // miss was resolved in old thread
-            this.changeContext = ContextChange.SWAP;
-
-        else if (this.waitingForReservation) // current thread in execution is in miss
-            this.changeContext = ContextChange.SWAP;
-
-        else // current thread in execution is not in miss
-            this.changeContext = ContextChange.NONE;
-
+        if (this.waitingContext.isOldContext() && this.changeContext != ContextChange.BRING_WAITING) // miss was resolved in old thread
+            this.setChangeContext(ContextChange.SWAP);
 
     }
 
@@ -302,17 +300,20 @@ public class CoreZero extends AbstractCore {
 
         switch (this.changeContext) {
             case SWAP:
+                System.out.println("swap");
                 Context tempContext = currentContext;
                 this.currentContext = this.waitingContext;
-                this.waitingContext = tempContext;
+                this.setWaitingContext(tempContext);
                 break;
             case BRING_WAITING:
+                System.out.println("bring waiting");
                 this.currentContext = this.waitingContext;
-                this.waitingContext = null;
+                this.currentContext.setOldContext(true);
+                this.setWaitingContext(null);
                 break;
         }
 
-        this.changeContext = ContextChange.NONE;
+        this.setChangeContext(ContextChange.NONE);
     }
 
     public boolean isWaitingForReservation() {
@@ -327,7 +328,7 @@ public class CoreZero extends AbstractCore {
         return changeContext;
     }
 
-    public void setChangeContext(ContextChange changeContext) {
+    public synchronized void setChangeContext(ContextChange changeContext) {
         this.changeContext = changeContext;
     }
 
@@ -343,7 +344,7 @@ public class CoreZero extends AbstractCore {
         return waitingContext;
     }
 
-    public void setWaitingContext(Context waitingContext) {
+    public synchronized void setWaitingContext(Context waitingContext) {
         this.waitingContext = waitingContext;
     }
 
@@ -359,7 +360,7 @@ public class CoreZero extends AbstractCore {
         return reservedInstructionCachePosition;
     }
 
-    public void setReservedInstructionCachePosition(int reservedInstructionCachePosition) {
+    public synchronized void setReservedInstructionCachePosition(int reservedInstructionCachePosition) {
         this.reservedInstructionCachePosition = reservedInstructionCachePosition;
     }
 

@@ -74,7 +74,7 @@ public class SimulationController {
         Context nextContext = this.contextQueue.getNextContext();
         nextContext.setOldContext(true);
         this.coreZero = new CoreZero(simulationBarrier, maxQuantum, nextContext, this,
-                this.instructionBus, this.dataBus,2);
+                this.instructionBus, this.dataBus,0);
 
         nextContext = this.contextQueue.getNextContext();
         nextContext.setOldContext(false);

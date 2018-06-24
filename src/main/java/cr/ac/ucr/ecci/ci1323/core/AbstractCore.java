@@ -48,10 +48,6 @@ public abstract class AbstractCore extends AbstractThread {
 
         while (!this.executionFinished) {
 
-            if (this.currentContext == null) {
-                System.out.println("Hola");
-            }
-
             int nextInstructionBlockNumber = this.calculateInstructionBlockNumber();
             int nextInstructionCachePosition = this.calculateCachePosition(nextInstructionBlockNumber, this.coreNumber);
             int nextInstructionCachePositionOffset = this.calculateInstructionOffset();
@@ -60,19 +56,18 @@ public abstract class AbstractCore extends AbstractThread {
                     nextInstructionCachePosition);
 
             if (instructionBlock != null) {
-                if (instructionBlock.getInstruction(nextInstructionCachePositionOffset) == null) {
-                    instructionBlock.printBlock();
-                    throw new IllegalArgumentException("" + nextInstructionCachePositionOffset);
-                }
+
                 Instruction instructionToExecute = instructionBlock.getInstruction(nextInstructionCachePositionOffset);
                 this.currentContext.incrementPC(SimulationConstants.WORD_SIZE);
 
                 this.executeInstruction(instructionToExecute);
                 this.currentContext.incrementQuantum();
-                if (this.currentContext.getCurrentQuantum() >= this.maxQuantum) {
+                this.advanceClockCycle();
+
+                if (instructionToExecute.getOperationCode() != 63 &&
+                        this.currentContext.getCurrentQuantum() >= this.maxQuantum) {
                     this.quantumExpired();
                 }
-                this.advanceClockCycle();
 
             } else
                 this.advanceClockCycle();
@@ -128,10 +123,7 @@ public abstract class AbstractCore extends AbstractThread {
     }
 
     protected void executeFIN(Instruction instruction) {
-        this.currentContext.incrementQuantum();
         this.currentContext.setFinishingCore(this.coreNumber);
-        this.advanceClockCycle();
-        System.out.println("finished: " + this.currentContext.getContextNumber());
         this.simulationController.addFinishedThread(this.currentContext);
         this.finishFINExecution();
     }
@@ -163,7 +155,6 @@ public abstract class AbstractCore extends AbstractThread {
     }
 
     protected void quantumExpired() {
-        System.out.println("Entre aqui");
         ContextQueue contextQueue = this.simulationController.getContextQueue();
 
         // Tries to lock the context queue
@@ -325,7 +316,7 @@ public abstract class AbstractCore extends AbstractThread {
      */
     protected int calculateCachePosition(int blockNumber, int coreNumber) {
         if (coreNumber == 0) {
-            System.exit(500);
+            //System.exit(500);
             return blockNumber % SimulationConstants.TOTAL_CORE_ZERO_CACHE_POSITIONS;
         }
         return blockNumber % SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS;
@@ -339,7 +330,7 @@ public abstract class AbstractCore extends AbstractThread {
      */
     protected int calculateOtherDataCachePosition(int blockNumber) {
         if (this.coreNumber == 0) {
-            System.exit(500);
+            //System.exit(500);
             return blockNumber % SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS;
         }
         return blockNumber % SimulationConstants.TOTAL_CORE_ZERO_CACHE_POSITIONS;

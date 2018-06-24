@@ -20,12 +20,9 @@ public class DataBus extends Bus {
             return this.coreZeroCache.getDataCachePositions()[position];
         } else if (coreNum == 0) {
             return this.coreOneCache.getDataCachePositions()[position];
-        }
-        System.exit(500);
-        return null;
-        /*else {
+        } else {
             throw new IllegalArgumentException("Invalid core number: " + coreNum);
-        }*/
+        }
     }
 
     public DataBlock getMemoryBlock(int index) {
