@@ -35,4 +35,13 @@ public class InstructionCachePosition {
     public void setInstructionBlock(InstructionBlock instructionBlock) {
         this.instructionBlock = instructionBlock;
     }
+
+    public void print() {
+        System.out.print("Etiqueta " + this.tag + ", Bloque de Instrucciones: { ");
+        if (this.instructionBlock == null)
+            this.instructionBlock.printBlock();
+        else
+            System.out.print("Vacio");
+        System.out.println(" }");
+    }
 }

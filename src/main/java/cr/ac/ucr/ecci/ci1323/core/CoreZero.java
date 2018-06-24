@@ -35,7 +35,7 @@ public class CoreZero extends AbstractCore {
                     SimulationController simulationController, InstructionBus instructionBus,
                     DataBus dataBus, int coreNumber) {
         super(simulationBarrier, maxQuantum, startingContext, simulationController,
-                SimulationConstants.TOTAL_CORE_CERO_CACHE_POSITIONS, instructionBus, dataBus, coreNumber);
+                SimulationConstants.TOTAL_CORE_ZERO_CACHE_POSITIONS, instructionBus, dataBus, coreNumber);
 
         this.waitingContext = null;
         this.reservedDataCachePosition = this.reservedInstructionCachePosition = -1;
@@ -102,6 +102,16 @@ public class CoreZero extends AbstractCore {
     @Override
     protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
             return this.enterCacheMiss(MissType.LOAD, blockNumber, dataCachePositionNumber, dataCachePosition, positionOffset, finalRegister);
+    }
+
+    @Override
+    protected boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
+        return false;
+    }
+
+    @Override
+    protected boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
+        return false;
     }
 
     @Override
@@ -224,7 +234,7 @@ public class CoreZero extends AbstractCore {
         }
 
         int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
-        DataCachePosition otherDataCachePosition = dataBus.getCachePosition(0, otherDataCachePositionNumber);
+        DataCachePosition otherDataCachePosition = dataBus.getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
 
         while (!otherDataCachePosition.tryLock()) {
             this.advanceClockCycle();

@@ -20,9 +20,12 @@ public class DataBus extends Bus {
             return this.coreZeroCache.getDataCachePositions()[position];
         } else if (coreNum == 0) {
             return this.coreOneCache.getDataCachePositions()[position];
-        } else {
-            throw new IllegalArgumentException("Invalid core number: " + coreNum);
         }
+        System.exit(500);
+        return null;
+        /*else {
+            throw new IllegalArgumentException("Invalid core number: " + coreNum);
+        }*/
     }
 
     public DataBlock getMemoryBlock(int index) {
@@ -36,6 +39,14 @@ public class DataBus extends Bus {
             dataBlock.getWords()[i] = newDataBlock.getWords()[i];
         }
 
+    }
+
+    public void printMemory() {
+        System.out.print("{ ");
+        for (DataBlock dataBlock : this.dataMemory) {
+            dataBlock.printBlock();
+        }
+        System.out.println(" }");
     }
 
     public int getMemoryBlockData(int blockNumber, int offset) {

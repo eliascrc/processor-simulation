@@ -57,13 +57,12 @@ public class Context {
      * Prints the context's values. Used for testing purposes.
      */
     public void print() {
-        System.out.print("Context: PC = " + this.programCounter
-                + ", Registers = { ");
+        System.out.print("Contexto #" + this.contextNumber + ": PC = " + this.programCounter
+                + ", Registros = { ");
         for (int register : this.registers) {
             System.out.print(register + ", ");
         }
-        System.out.println("} , Tics = " + this.executionTics + ", #Context = " + this.contextNumber
-        + ", Finishing Core: " + this.finishingCore);
+        System.out.println("} , Ciclos consumidos = " + this.executionTics + ", Nucleo en que termino: " + this.finishingCore);
     }
 
     public void incrementQuantum() {

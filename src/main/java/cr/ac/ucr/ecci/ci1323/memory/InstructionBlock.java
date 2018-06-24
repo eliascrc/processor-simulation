@@ -17,6 +17,5 @@ public class InstructionBlock {
             if (instructions[i] != null)
                 System.out.print(instructions[i].toString() + "\t");
         }
-        System.out.println();
     }
 }

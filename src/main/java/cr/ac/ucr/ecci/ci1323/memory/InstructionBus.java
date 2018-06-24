@@ -32,7 +32,7 @@ public class InstructionBus extends Bus {
         return this.instructionMemory;
     }
 
-    public void printInstructionMemory() {
+    public void printMemory() {
         System.out.println(instructionMemory.length);
         for (int i = 0; i < instructionMemory.length; i++) {
             this.instructionMemory[i].printBlock();

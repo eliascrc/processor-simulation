@@ -49,7 +49,6 @@ public class CoreOne extends AbstractCore {
         DataBus dataBus = this.dataCache.getDataBus();
 
         if (!dataBus.tryLock()) {
-            dataCachePosition.unlock();
             this.advanceClockCycle();
             return false;
         }
@@ -60,7 +59,7 @@ public class CoreOne extends AbstractCore {
 
         }
 
-        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(blockNumber);
         DataCachePosition otherDataCachePosition = dataBus.getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
 
         while (!otherDataCachePosition.tryLock()) {
@@ -79,7 +78,6 @@ public class CoreOne extends AbstractCore {
         otherDataCachePosition.unlock();
         this.currentContext.getRegisters()[finalRegister] = dataCachePosition.getDataBlock().getWord(positionOffset);
         dataBus.unlock();
-        dataCachePosition.unlock();
         return true;
     }
 
@@ -142,7 +140,7 @@ public class CoreOne extends AbstractCore {
         }
         this.advanceClockCycle();
 
-        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, positionOffset);
+        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
         if (otherDataCachePosition.getTag() == blockNumber || otherDataCachePosition.getState() == CachePositionState.INVALID) {
             this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, this);
             dataCachePosition.setState(CachePositionState.MODIFIED);

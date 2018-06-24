@@ -6,7 +6,7 @@ public class DataBlock implements Cloneable {
 
     private volatile int[] words;
 
-    DataBlock(int[] words) {
+    public DataBlock(int[] words) {
         this.words = words;
     }
 
@@ -18,6 +18,12 @@ public class DataBlock implements Cloneable {
             return dataBlockClone;
         } catch (CloneNotSupportedException e) {
             throw new InternalError("Unable to clone object of type [" + getClass().getName() + "]");
+        }
+    }
+
+    public void printBlock() {
+        for (int i = 0; i < this.words.length; i++) {
+            System.out.print(this.words[i] + "\t");
         }
     }
 

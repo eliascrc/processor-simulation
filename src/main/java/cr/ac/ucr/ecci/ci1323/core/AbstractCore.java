@@ -155,7 +155,6 @@ public abstract class AbstractCore extends AbstractThread {
         Context nextContext = contextQueue.getNextContext();
         if (nextContext == null) { // checks if there is no other context in the queue
             this.executionFinished = true;
-            System.err.println("Ya termine mama " + this.coreNumber);
         } else { // there is a context waiting in the queue
             this.currentContext = nextContext;
         }
@@ -188,7 +187,7 @@ public abstract class AbstractCore extends AbstractThread {
     protected void executeSW(Instruction instruction) {
         int blockNumber = this.calculateDataBlockNumber(instruction);
         int dataCachePositionOffset = this.calculateDataOffset(instruction);
-        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, dataCachePositionOffset);
+        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
         DataCachePosition dataCachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
         int value = this.currentContext.getRegisters()[instruction.getField(2)];
 
@@ -208,7 +207,7 @@ public abstract class AbstractCore extends AbstractThread {
     protected void executeLW(Instruction instruction) {
         int blockNumber = this.calculateDataBlockNumber(instruction);
         int dataCachePositionOffset = this.calculateDataOffset(instruction);
-        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, dataCachePositionOffset);
+        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
         DataCachePosition dataCachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
 
         boolean solvedMiss = false;
@@ -283,7 +282,8 @@ public abstract class AbstractCore extends AbstractThread {
 
     protected void executeJAL(Instruction instruction) {
         this.getRegisters()[31] = this.getPC();
-        this.setPC(instruction.getField(3));
+        int newPC = this.getPC() + instruction.getField(3);
+        this.setPC(newPC);
     }
 
     protected void executeJR(Instruction instruction) {
@@ -325,7 +325,8 @@ public abstract class AbstractCore extends AbstractThread {
      */
     protected int calculateCachePosition(int blockNumber, int coreNumber) {
         if (coreNumber == 0) {
-            return blockNumber % SimulationConstants.TOTAL_CORE_CERO_CACHE_POSITIONS;
+            System.exit(500);
+            return blockNumber % SimulationConstants.TOTAL_CORE_ZERO_CACHE_POSITIONS;
         }
         return blockNumber % SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS;
     }
@@ -338,9 +339,10 @@ public abstract class AbstractCore extends AbstractThread {
      */
     protected int calculateOtherDataCachePosition(int blockNumber) {
         if (this.coreNumber == 0) {
+            System.exit(500);
             return blockNumber % SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS;
         }
-        return blockNumber % SimulationConstants.TOTAL_CORE_CERO_CACHE_POSITIONS;
+        return blockNumber % SimulationConstants.TOTAL_CORE_ZERO_CACHE_POSITIONS;
     }
 
     /**
@@ -398,4 +400,26 @@ public abstract class AbstractCore extends AbstractThread {
         this.instructionCache = instructionCache;
     }
 
+    public void printContext() {
+        System.out.println("El Contexto #" + this.currentContext.getContextNumber() + " esta corriendo en el Nucleo #" +
+                this.coreNumber);
+    }
+
+    public void printCaches() {
+        System.out.println("Caches para el Nucleo #" + this.coreNumber);
+
+        System.out.println("Cache de instrucciones:");
+        InstructionCachePosition[] instructionCachePositions = this.instructionCache.getInstructionCachePositions();
+        for (int i = 0; i < instructionCachePositions.length; i++) {
+            System.out.print("Posicion #" + i + ": ");
+            instructionCachePositions[i].print();
+        }
+
+        System.out.println("Cache de datos:");
+        DataCachePosition[] dataCachePositions = this.dataCache.getDataCachePositions();
+        for (int i = 0; i < dataCachePositions.length; i++) {
+            System.out.print("Posicion #" + i + ": ");
+            dataCachePositions[i].print();
+        }
+    }
 }

@@ -61,6 +61,7 @@ public class InstructionCache {
 
         this.instructionCachePositions[nextInstructionPositionNumber].setInstructionBlock(
                 this.instructionBus.getInstructionBlock(nextInstructionBlockNumber));
+        this.instructionCachePositions[nextInstructionPositionNumber].setTag(nextInstructionBlockNumber);
 
         this.instructionBus.unlock();
     }

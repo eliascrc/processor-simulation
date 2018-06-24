@@ -69,4 +69,14 @@ public class DataCachePosition {
     public void setState(CachePositionState cachePositionState) {
         this.cachePositionState = cachePositionState;
     }
+
+    public void print() {
+        System.out.print("Etiqueta " + this.tag + ", Estado: " + this.cachePositionState + ", Bloque de Datos: { ");
+
+        if (this.dataBlock == null)
+            System.out.print("vacio");
+        else
+            this.dataBlock.printBlock();
+        System.out.println(" }");
+    }
 }
