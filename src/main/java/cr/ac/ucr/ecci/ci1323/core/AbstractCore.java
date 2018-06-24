@@ -188,7 +188,21 @@ public abstract class AbstractCore extends AbstractThread {
     protected void executeSW(Instruction instruction) {
         int blockNumber = this.calculateDataBlockNumber(instruction);
         int dataCachePositionOffset = this.calculateDataOffset(instruction);
-        int dataCachePosition = this.calculateCachePosition(blockNumber, dataCachePositionOffset);
+        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, dataCachePositionOffset);
+        DataCachePosition dataCachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
+        int value = this.currentContext.getRegisters()[instruction.getField(2)];
+
+        boolean solvedMiss = false;
+        while (!solvedMiss) {
+            this.blockDataCachePosition(dataCachePositionNumber);
+
+            if (dataCachePosition.getTag() != blockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
+                solvedMiss = this.handleStoreMiss(blockNumber, dataCachePosition, dataCachePositionOffset, value);
+            } else { // Hit
+                solvedMiss = this.handleStoreHit(blockNumber, dataCachePosition, dataCachePositionOffset, value);
+            }
+            dataCachePosition.unlock();
+        }
     }
 
     protected void executeLW(Instruction instruction) {
