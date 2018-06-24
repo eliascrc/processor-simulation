@@ -47,6 +47,10 @@ public class MissHandler extends AbstractThread {
                 this.solveDataLoadMiss();
                 break;
 
+            case STORE:
+                this.solveDataStoreMiss();
+                break;
+
             default:
                 throw new IllegalArgumentException("Invalid Miss Type in miss handler.");
         }
@@ -77,6 +81,25 @@ public class MissHandler extends AbstractThread {
             } else { // Hit
                 this.currentContext.getRegisters()[this.finalRegister] = dataCachePosition.getDataBlock().getWord(dataCachePositionOffset);
                 solvedMiss = true;
+            }
+            dataCachePosition.unlock();
+        }
+    }
+
+    private void solveDataStoreMiss() {
+        boolean solvedMiss = false;
+        while (!solvedMiss) {
+
+            while(this.coreZero.getReservedDataCachePosition() == this.nextCachePosition) {
+                this.advanceClockCycle();
+            }
+
+            while (!this.dataCachePosition.tryLock()) {
+                this.advanceClockCycle();
+            }
+
+            if (dataCachePosition.getTag() != this.nextBlockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
+                solvedMiss = this.coreZero.solveDataStoreMiss(this.nextBlockNumber, this.dataCachePosition, this.dataCachePositionOffset, this.nextCachePosition, this.finalRegister, this);
             }
             dataCachePosition.unlock();
         }
