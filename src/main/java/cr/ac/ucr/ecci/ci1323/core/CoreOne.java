@@ -93,7 +93,7 @@ public class CoreOne extends AbstractCore {
             dataCachePosition.setState(CachePositionState.SHARED);
         }
 
-        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(blockNumber);
         DataCachePosition otherDataCachePosition = dataBus
                 .getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
         while (!otherDataCachePosition.tryLock()) {
@@ -126,7 +126,6 @@ public class CoreOne extends AbstractCore {
         otherDataCachePosition.unlock();
         dataCachePosition.setTag(blockNumber);
         dataBus.unlock();
-        dataCachePosition.unlock();
 
         return true;
     }

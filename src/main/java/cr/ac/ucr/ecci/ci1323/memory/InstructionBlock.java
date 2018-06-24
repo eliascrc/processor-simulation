@@ -9,7 +9,6 @@ public class InstructionBlock {
     }
 
     public Instruction getInstruction(int index) {
-        System.out.println("``````" + instructions.length);
         return instructions[index];
     }
 

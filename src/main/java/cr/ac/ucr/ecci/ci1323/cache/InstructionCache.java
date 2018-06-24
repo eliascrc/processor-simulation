@@ -53,9 +53,6 @@ public class InstructionCache {
                                               AbstractThread callingThread) {
 
         while (!this.instructionBus.tryLock()) {
-            System.out.println(callingThread.getSimulationBarrier().getRegisteredParties());
-            if (callingThread instanceof MissHandler) System.out.println("yup");
-            else System.out.println("noup");
             callingThread.advanceClockCycle();
         }
         callingThread.advanceClockCycle();

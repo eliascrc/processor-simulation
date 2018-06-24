@@ -88,8 +88,6 @@ public class CoreZero extends AbstractCore {
     @Override
     public void printContext() {
         super.printContext();
-        System.out.println("MH = " + missHandler + ", WC = " + waitingContext);
-        System.out.println("RP = " + reservedDataCachePosition + ", RIP = " + reservedInstructionCachePosition);
     }
 
     @Override
@@ -117,7 +115,6 @@ public class CoreZero extends AbstractCore {
 
     @Override
     protected void quantumExpired() {
-        System.out.println(currentContext.getContextNumber() + " se acabo el quantum");
         if (this.waitingContext == null && this.missHandler == null) { // checks if there is no other context waiting in execution
             super.quantumExpired();
 
@@ -161,7 +158,6 @@ public class CoreZero extends AbstractCore {
                     .getInstructionCachePosition(nextInstructionCachePosition);
 
             if (instructionCachePosition.getTag() != nextInstructionBlockNumber) { // miss
-                System.out.println("Hubo miss");
                 solvedMiss = this.enterCacheMiss(MissType.INSTRUCTION, nextInstructionBlockNumber,
                         nextInstructionCachePosition, null, -1, -1);
             } else {
@@ -198,7 +194,6 @@ public class CoreZero extends AbstractCore {
 
             Context nextContext = contextQueue.getNextContext();
             if (nextContext != null) {
-                System.out.println("NC NOT NULL");
                 nextContext.setOldContext(false);
                 this.currentContext = nextContext;
                 this.missHandler.start();
@@ -207,7 +202,6 @@ public class CoreZero extends AbstractCore {
                     solvedMiss = false;
 
             } else {
-                System.out.println("NC NULL");
                 this.missHandler = null;
                 solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
             }
@@ -235,7 +229,6 @@ public class CoreZero extends AbstractCore {
 
     public boolean solveDataLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister, AbstractThread callingThread) {
         if(this.getReservedDataCachePosition() != -1) {
-            System.out.println("Niet");
             return false;
         } else {
             this.setReservedDataCachePosition(dataCachePositionNumber);
@@ -338,7 +331,6 @@ public class CoreZero extends AbstractCore {
         otherDataCachePosition.unlock();
         this.setReservedDataCachePosition(-1);
         dataBus.unlock();
-        dataCachePosition.unlock();
 
         return true;
     }
@@ -372,13 +364,11 @@ public class CoreZero extends AbstractCore {
 
         switch (this.changeContext) {
             case SWAP:
-                System.out.println("swap");
                 Context tempContext = currentContext;
                 this.currentContext = this.waitingContext;
                 this.setWaitingContext(tempContext);
                 break;
             case BRING_WAITING:
-                System.out.println("bring waiting");
                 this.currentContext = this.waitingContext;
                 this.currentContext.setOldContext(true);
                 this.setWaitingContext(null);

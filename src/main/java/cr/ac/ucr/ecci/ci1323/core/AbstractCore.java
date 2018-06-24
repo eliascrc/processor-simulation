@@ -59,9 +59,6 @@ public abstract class AbstractCore extends AbstractThread {
 
                 Instruction instructionToExecute = instructionBlock.getInstruction(nextInstructionCachePositionOffset);
                 this.currentContext.incrementPC(SimulationConstants.WORD_SIZE);
-                if (instructionToExecute == null)
-                    System.out.println(nextInstructionCachePositionOffset);
-                instructionBlock.printBlock();
                 this.executeInstruction(instructionToExecute);
 
                 this.currentContext.incrementQuantum();
@@ -82,10 +79,7 @@ public abstract class AbstractCore extends AbstractThread {
     }
 
     protected void executeInstruction(Instruction instruction) {
-        System.out.println("entro al execute instruction, core: " + this.coreNumber);
-        System.out.println(instruction);
         int operationCode = instruction.getOperationCode();
-        System.out.println("luego de opcode " + this.coreNumber);
         switch (operationCode) {
             case 2:
                 this.executeJR(instruction);
@@ -126,11 +120,9 @@ public abstract class AbstractCore extends AbstractThread {
             default:
                 throw new IllegalArgumentException("Invalid instruction operation code");
         }
-        System.out.println("salio del execute instruction, core: " + this.coreNumber);
     }
 
     protected void executeFIN(Instruction instruction) {
-        System.out.println(currentContext.getContextNumber() + " termino");
         this.currentContext.setFinishingCore(this.coreNumber);
         this.simulationController.addFinishedThread(this.currentContext);
         this.finishFINExecution();
@@ -164,7 +156,6 @@ public abstract class AbstractCore extends AbstractThread {
             this.executionFinished = true;
         } else { // there is a context waiting in the queue
             this.currentContext = nextContext;
-            System.out.println();
         }
 
         contextQueue.unlock();
@@ -460,5 +451,6 @@ public abstract class AbstractCore extends AbstractThread {
             System.out.print("Posicion #" + i + ": ");
             dataCachePositions[i].print();
         }
+        System.out.println();
     }
 }
