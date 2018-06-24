@@ -72,4 +72,8 @@ public class ContextQueue {
             context.print();
         }
     }
+
+    public int size() {
+        return contextQueue.size();
+    }
 }

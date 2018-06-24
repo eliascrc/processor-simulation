@@ -76,6 +76,7 @@ public class CoreOne extends AbstractCore {
         }
 
         otherDataCachePosition.unlock();
+        dataCachePosition.setTag(blockNumber);
         this.currentContext.getRegisters()[finalRegister] = dataCachePosition.getDataBlock().getWord(positionOffset);
         dataBus.unlock();
         return true;

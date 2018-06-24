@@ -90,10 +90,10 @@ public class CoreZero extends AbstractCore {
 
     }
 
-    @Override
+    /*@Override
     protected void executeLW(Instruction instruction) {
-
-    }
+        System.out.println("Core zero load");
+    }*/
 
     @Override
     protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
@@ -146,7 +146,7 @@ public class CoreZero extends AbstractCore {
             this.waitingContext.setOldContext(true);
 
             this.setChangeContext(ContextChange.BRING_WAITING);
-            this.advanceClockCycle();
+            this.advanceClockCycleChangingContext();
 
         }
     }
@@ -157,11 +157,12 @@ public class CoreZero extends AbstractCore {
         while (!solvedMiss) {
             nextInstructionBlockNumber = this.calculateInstructionBlockNumber();
             nextInstructionCachePosition = this.calculateCachePosition(nextInstructionBlockNumber, this.coreNumber);
-            System.out.println("wtf");
+
             while (this.reservedInstructionCachePosition == nextInstructionBlockNumber) {
                 this.advanceClockCycle();
             }
 
+            //System.out.println("prueba 2");
             InstructionCachePosition instructionCachePosition = this.instructionCache
                     .getInstructionCachePosition(nextInstructionCachePosition);
 
@@ -178,8 +179,8 @@ public class CoreZero extends AbstractCore {
 
     private boolean enterCacheMiss(MissType missType, int nextBlockNumber, int nextCachePosition, DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
         boolean solvedMiss = true;
+        //System.out.println("prueba 2");
         ContextQueue contextQueue = this.simulationController.getContextQueue();
-
         if (this.waitingContext != null) { // there is a waiting context,
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                     nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
@@ -194,6 +195,8 @@ public class CoreZero extends AbstractCore {
         } else { // miss handler is not running and there is no waiting context
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                     nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
+
+            System.out.println(contextQueue.size());
 
             while (!contextQueue.tryLock())
                 this.advanceClockCycle();
@@ -215,21 +218,25 @@ public class CoreZero extends AbstractCore {
         return solvedMiss;
     }
 
-    public boolean solveMissLocally(MissType missType, int nextBlockNumber, int nextCachePosition, DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
+    public boolean solveMissLocally(MissType missType, int nextBlockNumber, int nextCachePosition,
+                                    DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
 
         switch (missType) {
             case INSTRUCTION:
                 return this.solveInstructionMissLocally(nextBlockNumber, nextCachePosition);
             case LOAD:
-                return this.solveDataLoadMissLocally(nextBlockNumber, dataCachePosition, dataCachePositionOffset, nextCachePosition, finalRegister);
+                return this.solveDataLoadMiss(nextBlockNumber, dataCachePosition, dataCachePositionOffset, nextCachePosition, finalRegister, this);
             default:
                 throw new IllegalArgumentException("Invalid Miss Type in core zero.");
         }
     }
 
-    public boolean solveDataLoadMissLocally(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
+    public boolean solveDataLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister, AbstractThread callingThread) {
         if(this.getReservedDataCachePosition() != -1) {
-            this.advanceClockCycle();
+            if (callingThread instanceof CoreZero)
+                ((CoreZero)callingThread).advanceClockCycleChangingContext();
+            else
+                callingThread.advanceClockCycle();
             return false;
         } else {
             this.setReservedDataCachePosition(dataCachePositionNumber);
@@ -238,34 +245,38 @@ public class CoreZero extends AbstractCore {
         DataBus dataBus = this.dataCache.getDataBus();
 
         if (!dataBus.tryLock()) {
-            this.advanceClockCycle();
+            if (callingThread instanceof CoreZero)
+                ((CoreZero)callingThread).advanceClockCycleChangingContext();
+            else
+                callingThread.advanceClockCycle();
             return false;
         }
 
-        this.advanceClockCycle();
+        callingThread.advanceClockCycle();
         if (dataCachePosition.getTag() != blockNumber && dataCachePosition.getState() == CachePositionState.MODIFIED) {
-            this.dataCache.writeBlockToMemory(dataCachePosition, this);
+            this.dataCache.writeBlockToMemory(dataCachePosition, callingThread);
 
         }
 
-        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(blockNumber);
         DataCachePosition otherDataCachePosition = dataBus.getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
 
         while (!otherDataCachePosition.tryLock()) {
-            this.advanceClockCycle();
+            callingThread.advanceClockCycle();
         }
-        this.advanceClockCycle();
+        callingThread.advanceClockCycle();
 
         if (otherDataCachePosition.getTag() == blockNumber && otherDataCachePosition.getState() == CachePositionState.MODIFIED) {
-            this.dataCache.writeBlockToMemory(otherDataCachePosition, this);
+            this.dataCache.writeBlockToMemory(otherDataCachePosition, callingThread);
             dataCachePosition.setDataBlock(otherDataCachePosition.getDataBlock().clone());
             otherDataCachePosition.setState(CachePositionState.SHARED);
         } else {
-            this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, this);
+            this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, callingThread);
         }
 
         otherDataCachePosition.unlock();
-        this.currentContext.getRegisters()[finalRegister] = dataCachePosition.getDataBlock().getWord(positionOffset);
+        dataCachePosition.setTag(blockNumber);
+        callingThread.getCurrentContext().getRegisters()[finalRegister] = dataCachePosition.getDataBlock().getWord(positionOffset);
         this.setReservedDataCachePosition(-1);
         dataBus.unlock();
         return true;
@@ -279,7 +290,7 @@ public class CoreZero extends AbstractCore {
             return true;
         }
 
-        this.advanceClockCycle();
+        this.advanceClockCycleChangingContext();
         return false;
     }
 

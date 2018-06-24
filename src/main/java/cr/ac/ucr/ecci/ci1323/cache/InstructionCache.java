@@ -51,6 +51,8 @@ public class InstructionCache {
                                               AbstractThread callingThread) {
 
         while (!this.instructionBus.tryLock()) {
+            System.out.println(callingThread.getSimulationBarrier().getRegisteredParties());
+            System.out.println("aaaaaaa");
             callingThread.advanceClockCycle();
         }
         callingThread.advanceClockCycle();

@@ -1,9 +1,7 @@
 package cr.ac.ucr.ecci.ci1323.core;
 
 import cr.ac.ucr.ecci.ci1323.cache.CachePositionState;
-import cr.ac.ucr.ecci.ci1323.cache.DataCache;
 import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
-import cr.ac.ucr.ecci.ci1323.cache.InstructionCache;
 import cr.ac.ucr.ecci.ci1323.context.Context;
 
 import java.util.concurrent.Phaser;
@@ -23,7 +21,6 @@ public class MissHandler extends AbstractThread {
         super(simulationBarrier, context);
         this.coreZero = coreZero;
         this.missType = missType;
-        this.simulationBarrier.register();
         this.nextCachePosition = nextCachePosition;
         this.nextBlockNumber = nextBlockNumber;
         this.dataCachePosition = dataCachePosition;
@@ -33,6 +30,7 @@ public class MissHandler extends AbstractThread {
 
     @Override
     public void run() {
+        this.simulationBarrier.register();
         this.solveMiss();
         this.coreZero.setWaitingContext(this.currentContext);
         this.coreZero.finishMissHandlerExecution();
@@ -65,10 +63,17 @@ public class MissHandler extends AbstractThread {
     private void solveDataLoadMiss() {
         boolean solvedMiss = false;
         while (!solvedMiss) {
-            this.coreZero.blockDataCachePosition(this.nextCachePosition);
+
+            while(this.coreZero.getReservedDataCachePosition() == this.nextCachePosition) {
+                this.advanceClockCycle();
+            }
+
+            while (!this.dataCachePosition.tryLock()) {
+                this.advanceClockCycle();
+            }
 
             if (dataCachePosition.getTag() != this.nextBlockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
-                solvedMiss = this.coreZero.solveDataLoadMissLocally(this.nextBlockNumber, this.dataCachePosition, this.dataCachePositionOffset, this.nextCachePosition, this.finalRegister);
+                solvedMiss = this.coreZero.solveDataLoadMiss(this.nextBlockNumber, this.dataCachePosition, this.dataCachePositionOffset, this.nextCachePosition, this.finalRegister, this);
             } else { // Hit
                 this.currentContext.getRegisters()[this.finalRegister] = dataCachePosition.getDataBlock().getWord(dataCachePositionOffset);
                 solvedMiss = true;
@@ -89,4 +94,7 @@ public class MissHandler extends AbstractThread {
         this.simulationBarrier = simulationBarrier;
     }
 
+    public int getNextCachePosition() {
+        return nextCachePosition;
+    }
 }

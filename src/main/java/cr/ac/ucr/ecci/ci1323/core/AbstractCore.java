@@ -62,7 +62,7 @@ public abstract class AbstractCore extends AbstractThread {
 
                 this.executeInstruction(instructionToExecute);
                 this.currentContext.incrementQuantum();
-                this.advanceClockCycle();
+                this.advanceClockCycleChangingContext();
 
                 if (instructionToExecute.getOperationCode() != 63 &&
                         this.currentContext.getCurrentQuantum() >= this.maxQuantum) {
@@ -70,7 +70,7 @@ public abstract class AbstractCore extends AbstractThread {
                 }
 
             } else
-                this.advanceClockCycle();
+                this.advanceClockCycleChangingContext();
 
         }
 
@@ -123,13 +123,21 @@ public abstract class AbstractCore extends AbstractThread {
     }
 
     protected void executeFIN(Instruction instruction) {
+        System.out.println(currentContext.getContextNumber() + " termino");
         this.currentContext.setFinishingCore(this.coreNumber);
         this.simulationController.addFinishedThread(this.currentContext);
         this.finishFINExecution();
     }
 
-    @Override
-    public void advanceClockCycle() {
+//    @Override
+//    public void advanceClockCycle() {
+//        this.simulationBarrier.arriveAndAwaitAdvance();
+//        this.currentContext.incrementClockCycle();
+//        //this.changeContext();
+//        this.simulationBarrier.arriveAndAwaitAdvance();
+//    }
+
+    public void advanceClockCycleChangingContext() {
         this.simulationBarrier.arriveAndAwaitAdvance();
         this.currentContext.incrementClockCycle();
         this.changeContext();
@@ -155,6 +163,7 @@ public abstract class AbstractCore extends AbstractThread {
     }
 
     protected void quantumExpired() {
+        System.out.println(currentContext.getContextNumber() + " se acabo el quantum");
         ContextQueue contextQueue = this.simulationController.getContextQueue();
 
         // Tries to lock the context queue
@@ -196,13 +205,13 @@ public abstract class AbstractCore extends AbstractThread {
     }
 
     protected void executeLW(Instruction instruction) {
-        int blockNumber = this.calculateDataBlockNumber(instruction);
-        int dataCachePositionOffset = this.calculateDataOffset(instruction);
-        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
-        DataCachePosition dataCachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
 
         boolean solvedMiss = false;
         while (!solvedMiss) {
+            int blockNumber = this.calculateDataBlockNumber(instruction);
+            int dataCachePositionOffset = this.calculateDataOffset(instruction);
+            int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
+            DataCachePosition dataCachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
             this.blockDataCachePosition(dataCachePositionNumber);
 
             if (dataCachePosition.getTag() != blockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
