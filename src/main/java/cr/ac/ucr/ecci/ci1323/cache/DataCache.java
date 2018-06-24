@@ -46,7 +46,6 @@ public class DataCache {
         this.dataCachePositions[dataPositionNumber].setDataBlock(
                 this.dataBus.getMemoryBlock(dataBlockNumber).clone());
         this.dataCachePositions[dataPositionNumber].setState(CachePositionState.SHARED);
-        this.dataBus.unlock();
     }
 
     public DataCachePosition[] getDataCachePositions() {

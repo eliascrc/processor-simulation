@@ -1,5 +1,6 @@
 package cr.ac.ucr.ecci.ci1323.core;
 
+import cr.ac.ucr.ecci.ci1323.cache.CachePositionState;
 import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
 import cr.ac.ucr.ecci.ci1323.cache.InstructionCachePosition;
 import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
@@ -99,13 +100,19 @@ public class CoreZero extends AbstractCore {
     }
 
     @Override
-    protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset) {
-        return false;
+    protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
+            return this.enterCacheMiss(MissType.LOAD, blockNumber, dataCachePositionNumber, dataCachePosition, positionOffset, finalRegister);
     }
 
     @Override
     protected void blockDataCachePosition(int dataCachePosition) {
-
+        while(this.reservedDataCachePosition == dataCachePosition) {
+            this.advanceClockCycle();
+        }
+        DataCachePosition cachePosition = this.dataCache.getDataCachePosition(dataCachePosition);
+        while (!cachePosition.tryLock()) {
+            this.advanceClockCycle();
+        }
     }
 
     @Override
@@ -143,7 +150,7 @@ public class CoreZero extends AbstractCore {
 
             if (instructionCachePosition.getTag() != nextInstructionBlockNumber) { // miss
                 solvedMiss = this.enterCacheMiss(MissType.INSTRUCTION, nextInstructionBlockNumber,
-                        nextInstructionCachePosition);
+                        nextInstructionCachePosition, null, -1, -1);
             } else {
                 solvedMiss = true;
             }
@@ -152,21 +159,21 @@ public class CoreZero extends AbstractCore {
         return this.instructionCache.getInstructionCachePosition(nextInstructionCachePosition).getInstructionBlock();
     }
 
-    private boolean enterCacheMiss(MissType missType, int nextBlockNumber, int nextCachePosition) {
+    private boolean enterCacheMiss(MissType missType, int nextBlockNumber, int nextCachePosition, DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
         boolean solvedMiss = true;
         ContextQueue contextQueue = this.simulationController.getContextQueue();
         if (this.waitingContext != null) { // there is a waiting context,
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
-                    nextBlockNumber, nextCachePosition);
+                    nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
             this.currentContext = this.waitingContext;
             this.waitingContext = null;
             this.missHandler.start();
 
         } else if (this.missHandler != null) { // miss handler is running, must try to solve by itself
-            solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition);
+            solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
         } else { // miss handler is not running and there is no waiting context
             this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
-                    nextBlockNumber, nextCachePosition);
+                    nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
 
             while (!contextQueue.tryLock())
                 this.advanceClockCycle();
@@ -183,14 +190,60 @@ public class CoreZero extends AbstractCore {
         return solvedMiss;
     }
 
-    public boolean solveMissLocally(MissType missType, int nextBlockNumber, int nextCachePosition) {
+    public boolean solveMissLocally(MissType missType, int nextBlockNumber, int nextCachePosition, DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
 
         switch (missType) {
             case INSTRUCTION:
                 return this.solveInstructionMissLocally(nextBlockNumber, nextCachePosition);
+            case LOAD:
+                return this.solveDataLoadMissLocally(nextBlockNumber, dataCachePosition, dataCachePositionOffset, nextCachePosition, finalRegister);
             default:
                 throw new IllegalArgumentException("Invalid Miss Type in core zero.");
         }
+    }
+
+    public boolean solveDataLoadMissLocally(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
+        if(this.getReservedDataCachePosition() != -1) {
+            this.advanceClockCycle();
+            return false;
+        } else {
+            this.setReservedDataCachePosition(dataCachePositionNumber);
+        }
+
+        DataBus dataBus = this.dataCache.getDataBus();
+
+        if (!dataBus.tryLock()) {
+            this.advanceClockCycle();
+            return false;
+        }
+
+        this.advanceClockCycle();
+        if (dataCachePosition.getTag() != blockNumber && dataCachePosition.getState() == CachePositionState.MODIFIED) {
+            this.dataCache.writeBlockToMemory(dataCachePosition, this);
+
+        }
+
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
+        DataCachePosition otherDataCachePosition = dataBus.getCachePosition(0, otherDataCachePositionNumber);
+
+        while (!otherDataCachePosition.tryLock()) {
+            this.advanceClockCycle();
+        }
+        this.advanceClockCycle();
+
+        if (otherDataCachePosition.getTag() == blockNumber && otherDataCachePosition.getState() == CachePositionState.MODIFIED) {
+            this.dataCache.writeBlockToMemory(otherDataCachePosition, this);
+            dataCachePosition.setDataBlock(otherDataCachePosition.getDataBlock().clone());
+            otherDataCachePosition.setState(CachePositionState.SHARED);
+        } else {
+            this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, this);
+        }
+
+        otherDataCachePosition.unlock();
+        this.currentContext.getRegisters()[finalRegister] = dataCachePosition.getDataBlock().getWord(positionOffset);
+        this.setReservedDataCachePosition(-1);
+        dataBus.unlock();
+        return true;
     }
 
     public boolean solveInstructionMissLocally(int nextBlockNumber, int nextCachePosition) {

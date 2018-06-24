@@ -1,6 +1,8 @@
 package cr.ac.ucr.ecci.ci1323.core;
 
+import cr.ac.ucr.ecci.ci1323.cache.CachePositionState;
 import cr.ac.ucr.ecci.ci1323.cache.DataCache;
+import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
 import cr.ac.ucr.ecci.ci1323.cache.InstructionCache;
 import cr.ac.ucr.ecci.ci1323.context.Context;
 
@@ -12,20 +14,28 @@ public class MissHandler extends AbstractThread {
     private MissType missType;
     private int nextCachePosition;
     private int nextBlockNumber;
+    private DataCachePosition dataCachePosition;
+    private int dataCachePositionOffset;
+    private int finalRegister;
 
     MissHandler(CoreZero coreZero, Context context, MissType missType, Phaser simulationBarrier, int nextBlockNumber,
-                int nextCachePosition) {
+                int nextCachePosition, DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
         super(simulationBarrier, context);
         this.coreZero = coreZero;
         this.missType = missType;
         this.simulationBarrier.register();
         this.nextCachePosition = nextCachePosition;
         this.nextBlockNumber = nextBlockNumber;
+        this.dataCachePosition = dataCachePosition;
+        this.dataCachePositionOffset = dataCachePositionOffset;
+        this.finalRegister = finalRegister;
     }
 
     @Override
     public void run() {
         this.solveMiss();
+        this.coreZero.setWaitingContext(this.currentContext);
+        this.coreZero.finishMissHandlerExecution();
         this.simulationBarrier.arriveAndDeregister();
     }
 
@@ -33,6 +43,10 @@ public class MissHandler extends AbstractThread {
         switch (this.missType) {
             case INSTRUCTION:
                 this.solveInstructionMiss();
+                break;
+
+            case LOAD:
+                this.solveDataLoadMiss();
                 break;
 
             default:
@@ -46,9 +60,21 @@ public class MissHandler extends AbstractThread {
         this.coreZero.getInstructionCache().getInstructionBlockFromMemory(this.nextBlockNumber,
                 this.nextCachePosition, this);
         this.coreZero.setReservedInstructionCachePosition(-1);
-        this.coreZero.setWaitingContext(this.currentContext);
-        System.out.println("MH:" + this.currentContext.getContextNumber());
-        this.coreZero.finishMissHandlerExecution();
+    }
+
+    private void solveDataLoadMiss() {
+        boolean solvedMiss = false;
+        while (!solvedMiss) {
+            this.coreZero.blockDataCachePosition(this.nextCachePosition);
+
+            if (dataCachePosition.getTag() != this.nextBlockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
+                solvedMiss = this.coreZero.solveDataLoadMissLocally(this.nextBlockNumber, this.dataCachePosition, this.dataCachePositionOffset, this.nextCachePosition, this.finalRegister);
+            } else { // Hit
+                this.currentContext.getRegisters()[this.finalRegister] = dataCachePosition.getDataBlock().getWord(dataCachePositionOffset);
+                solvedMiss = true;
+            }
+            dataCachePosition.unlock();
+        }
     }
 
     public void setCoreZero(CoreZero coreZero) {

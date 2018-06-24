@@ -202,17 +202,16 @@ public abstract class AbstractCore extends AbstractThread {
             this.blockDataCachePosition(dataCachePositionNumber);
 
             if (dataCachePosition.getTag() != blockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
-                solvedMiss = this.handleLoadMiss(blockNumber, dataCachePosition, dataCachePositionOffset);
-
+                solvedMiss = this.handleLoadMiss(blockNumber, dataCachePosition, dataCachePositionOffset, dataCachePositionNumber, instruction.getField(2));
             } else { // Hit
                 this.currentContext.getRegisters()[instruction.getField(2)] = dataCachePosition.getDataBlock().getWord(dataCachePositionOffset);
-                dataCachePosition.unlock();
                 solvedMiss = true;
             }
+            dataCachePosition.unlock();
         }
     }
 
-    protected abstract boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset);
+    protected abstract boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister);
 
     protected abstract void blockDataCachePosition(int dataCachePosition);
 

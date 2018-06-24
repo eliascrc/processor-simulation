@@ -44,7 +44,7 @@ public class CoreOne extends AbstractCore {
     }
 
     @Override
-    protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset) {
+    protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
 
         DataBus dataBus = this.dataCache.getDataBus();
 
@@ -73,14 +73,14 @@ public class CoreOne extends AbstractCore {
             dataCachePosition.setDataBlock(otherDataCachePosition.getDataBlock().clone());
             otherDataCachePosition.setState(CachePositionState.SHARED);
         } else {
-            int dataCachePositionNumber = this.calculateCachePosition(blockNumber, positionOffset);
             this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, this);
         }
 
         otherDataCachePosition.unlock();
-
+        this.currentContext.getRegisters()[finalRegister] = dataCachePosition.getDataBlock().getWord(positionOffset);
+        dataBus.unlock();
+        dataCachePosition.unlock();
         return true;
-
     }
 
     @Override
