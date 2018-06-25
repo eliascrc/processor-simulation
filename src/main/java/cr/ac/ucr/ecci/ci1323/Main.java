@@ -28,8 +28,6 @@ public class Main {
 
         } catch (InterruptedException e) {
             e.printStackTrace();
-        } catch (Exception e) {
-            System.exit(500);
         }
 
     }

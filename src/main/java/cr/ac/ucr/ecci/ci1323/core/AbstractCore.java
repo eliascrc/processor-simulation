@@ -167,7 +167,7 @@ public abstract class AbstractCore extends AbstractThread {
 
         // Tries to lock the context queue
         while (!contextQueue.tryLock()) {
-            this.advanceClockCycle();
+            this.advanceBarriers();
         }
 
         this.setNextContext(contextQueue.getNextContext());
@@ -186,7 +186,7 @@ public abstract class AbstractCore extends AbstractThread {
 
         // Tries to lock the context queue
         while (!contextQueue.tryLock()) {
-            this.advanceClockCycle();
+            this.advanceBarriers();
         }
 
         this.setNextContext(contextQueue.getNextContext());

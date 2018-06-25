@@ -114,7 +114,7 @@ public class CoreZero extends AbstractCore {
 
             // Tries to lock the context queue
             while (!contextQueue.tryLock()) {
-                this.advanceClockCycle();
+                this.advanceBarriers();
             }
 
             this.setNextContext(contextQueue.getNextContext());
@@ -126,7 +126,8 @@ public class CoreZero extends AbstractCore {
                 } else {
 
                     while (this.waitingContext == null) {
-                        this.advanceClockCycle();
+                        // TODO Preguntar
+                        this.advanceBarriers();
                     }
 
                     // If it finishes, bring the waiting context
@@ -149,7 +150,7 @@ public class CoreZero extends AbstractCore {
     protected void quantumExpired() {
         this.setContextFinished(true);
 
-        if (this.waitingContext == null && this.missHandler == null) { // checks if there is no other context waiting in execution
+        if (this.waitingContext == null) { // checks if there is no other context waiting in execution
             super.quantumExpired();
 
         } else { // there is someone else waiting in execution
@@ -157,11 +158,7 @@ public class CoreZero extends AbstractCore {
 
             // Tries to lock the context queue
             while (!contextQueue.tryLock()) {
-                this.advanceClockCycle();
-            }
-
-            while (this.waitingContext == null) {
-                this.advanceClockCycle();
+                this.advanceBarriers();
             }
 
             this.currentContext.setCurrentQuantum(SimulationConstants.INITIAL_QUANTUM);

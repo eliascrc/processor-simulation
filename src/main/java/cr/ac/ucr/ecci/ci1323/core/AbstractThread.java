@@ -20,6 +20,11 @@ public abstract class AbstractThread extends Thread {
         this.simulationBarrier.arriveAndAwaitAdvance();
     }
 
+    protected void advanceBarriers() {
+        this.simulationBarrier.arriveAndAwaitAdvance();
+        this.simulationBarrier.arriveAndAwaitAdvance();
+    }
+
     public Phaser getSimulationBarrier() {
         return simulationBarrier;
     }
