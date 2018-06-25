@@ -6,6 +6,7 @@ import cr.ac.ucr.ecci.ci1323.cache.InstructionCachePosition;
 import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
 import cr.ac.ucr.ecci.ci1323.context.Context;
+import cr.ac.ucr.ecci.ci1323.exceptions.ContextChangeException;
 import cr.ac.ucr.ecci.ci1323.memory.DataBus;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
@@ -30,6 +31,27 @@ public class CoreOne extends AbstractCore {
     @Override
     public void run() {
         super.executeCore();
+    }
+
+    @Override
+    public void changeContext() {
+
+        switch (this.changeContext) {
+
+            case NEXT_CONTEXT:
+                this.setCurrentContext(this.nextContext);
+                this.currentContext.setOldContext(true);
+                this.setNextContext(null);
+                break;
+        }
+
+        ContextChange oldContextChange = this.changeContext;
+        this.setChangeContext(ContextChange.NONE);
+        this.simulationBarrier.arriveAndAwaitAdvance();
+
+        if (oldContextChange != ContextChange.NONE)
+            throw new ContextChangeException();
+
     }
 
     @Override
@@ -149,9 +171,5 @@ public class CoreOne extends AbstractCore {
                     this);
 
         return instructionCachePosition.getInstructionBlock();
-    }
-
-    public void changeContext() {
-
     }
 }

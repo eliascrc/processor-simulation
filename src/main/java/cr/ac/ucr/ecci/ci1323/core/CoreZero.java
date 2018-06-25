@@ -7,8 +7,8 @@ import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
 import cr.ac.ucr.ecci.ci1323.context.Context;
+import cr.ac.ucr.ecci.ci1323.exceptions.ContextChangeException;
 import cr.ac.ucr.ecci.ci1323.memory.DataBus;
-import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
 
@@ -21,15 +21,15 @@ import java.util.concurrent.Phaser;
  */
 public class CoreZero extends AbstractCore {
 
-    private MissHandler missHandler;
+    private volatile MissHandler missHandler;
+
     private volatile Context waitingContext;
 
     private volatile int reservedDataCachePosition;
 
     private volatile int reservedInstructionCachePosition;
 
-    private volatile ContextChange changeContext;
-    private boolean waitingForReservation;
+    private volatile boolean contextFinished;
 
     public CoreZero(Phaser simulationBarrier, int maxQuantum, Context startingContext,
                     SimulationController simulationController, InstructionBus instructionBus,
@@ -39,7 +39,6 @@ public class CoreZero extends AbstractCore {
 
         this.waitingContext = null;
         this.reservedDataCachePosition = this.reservedInstructionCachePosition = -1;
-        this.changeContext = ContextChange.NONE;
     }
 
     @Override
@@ -47,8 +46,68 @@ public class CoreZero extends AbstractCore {
         super.executeCore();
     }
 
+
+    public void changeContext() {
+        boolean startMissHandler = false;
+
+        if (this.executionFinished && this.changeContext == ContextChange.SWAP_CONTEXTS) {
+            // If the current context has finished or his quantum expired and the miss handler is requesting a swap
+            // just advance and ignore the request until BRING_WAITING is set
+            this.setChangeContext(ContextChange.NONE);
+            this.simulationBarrier.arriveAndAwaitAdvance();
+            return;
+        }
+
+        switch (this.changeContext) {
+            case SWAP_CONTEXTS:
+                Context tempContext = currentContext;
+                this.setCurrentContext(this.waitingContext);
+                this.setWaitingContext(tempContext);
+                break;
+
+            case BRING_WAITING:
+                this.setCurrentContext(this.waitingContext);
+                this.currentContext.setOldContext(true);
+                this.setWaitingContext(null);
+                break;
+
+            case BRING_WAITING_START_MISS_HANDLER:
+                this.setCurrentContext(this.waitingContext);
+                this.setWaitingContext(null);
+                startMissHandler = true;
+                break;
+
+            case NEXT_CONTEXT_START_MISS_HANDLER:
+                this.setCurrentContext(this.nextContext);
+                this.currentContext.setOldContext(true);
+                this.setNextContext(null);
+                startMissHandler = true;
+                break;
+
+            case NEXT_CONTEXT:
+                this.setCurrentContext(this.nextContext);
+                this.currentContext.setOldContext(true);
+                this.setNextContext(null);
+                break;
+        }
+
+        ContextChange oldContextChange = this.changeContext;
+        this.setChangeContext(ContextChange.NONE);
+        this.simulationBarrier.arriveAndAwaitAdvance();
+
+        if (startMissHandler)
+            this.missHandler.start();
+
+        if (oldContextChange != ContextChange.NONE) {
+            this.setContextFinished(false);
+            throw new ContextChangeException();
+        }
+    }
+
     @Override
-    protected void finishFINExecution() {
+    protected void modifiableFINExecution() {
+        this.setContextFinished(true);
+
         if (this.waitingContext == null) { // checks if there is no other context waiting in execution
 
             ContextQueue contextQueue = this.simulationController.getContextQueue();
@@ -58,15 +117,16 @@ public class CoreZero extends AbstractCore {
                 this.advanceClockCycle();
             }
 
-            Context nextContext = contextQueue.getNextContext();
-            if (nextContext == null) { // checks if there is no other context in the queue
-                if (this.waitingContext == null && missHandler == null) {
+            this.setNextContext(contextQueue.getNextContext());
+            if (this.nextContext == null) { // checks if there is no other context in the queue
+
+                if (this.waitingContext == null && this.missHandler == null) {
                     this.executionFinished = true;
+
                 } else {
 
                     while (this.waitingContext == null) {
-                        simulationBarrier.arriveAndAwaitAdvance();
-                        simulationBarrier.arriveAndAwaitAdvance();
+                        this.advanceClockCycle();
                     }
 
                     // If it finishes, bring the waiting context
@@ -75,7 +135,7 @@ public class CoreZero extends AbstractCore {
                 }
 
             } else { // there is a context waiting in the queue
-                this.currentContext = nextContext;
+                this.setChangeContext(ContextChange.NEXT_CONTEXT);
             }
 
             contextQueue.unlock();
@@ -86,35 +146,9 @@ public class CoreZero extends AbstractCore {
     }
 
     @Override
-    public void printContext() {
-        super.printContext();
-    }
-
-    @Override
-    protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
-            return this.enterCacheMiss(MissType.LOAD, blockNumber, dataCachePositionNumber, dataCachePosition, positionOffset, finalRegister);
-    }
-
-    @Override
-    protected boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
-        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
-
-        return this.enterCacheMiss(MissType.STORE, blockNumber, dataCachePositionNumber, dataCachePosition, positionOffset, value);
-    }
-
-    @Override
-    protected void blockDataCachePosition(int dataCachePosition) {
-        while(this.reservedDataCachePosition == dataCachePosition) {
-            this.advanceClockCycle();
-        }
-        DataCachePosition cachePosition = this.dataCache.getDataCachePosition(dataCachePosition);
-        while (!cachePosition.tryLock()) {
-            this.advanceClockCycle();
-        }
-    }
-
-    @Override
     protected void quantumExpired() {
+        this.setContextFinished(true);
+
         if (this.waitingContext == null && this.missHandler == null) { // checks if there is no other context waiting in execution
             super.quantumExpired();
 
@@ -126,36 +160,30 @@ public class CoreZero extends AbstractCore {
                 this.advanceClockCycle();
             }
 
-
             while (this.waitingContext == null) {
                 this.advanceClockCycle();
             }
 
+            this.currentContext.setCurrentQuantum(SimulationConstants.INITIAL_QUANTUM);
+            this.currentContext.setOldContext(false);
             contextQueue.pushContext(this.currentContext);
             contextQueue.unlock();
 
-            this.currentContext.setOldContext(false);
-            this.waitingContext.setOldContext(true);
-
             this.setChangeContext(ContextChange.BRING_WAITING);
-            this.advanceClockCycleChangingContext();
-
         }
     }
 
     @Override
     protected InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition) {
         boolean solvedMiss = false;
+        InstructionCachePosition instructionCachePosition = this.instructionCache.getInstructionCachePosition(
+                nextInstructionCachePosition);
+
         while (!solvedMiss) {
-            nextInstructionBlockNumber = this.calculateInstructionBlockNumber();
-            nextInstructionCachePosition = this.calculateCachePosition(nextInstructionBlockNumber, this.coreNumber);
 
             while (this.reservedInstructionCachePosition == nextInstructionCachePosition) {
                 this.advanceClockCycle();
             }
-
-            InstructionCachePosition instructionCachePosition = this.instructionCache
-                    .getInstructionCachePosition(nextInstructionCachePosition);
 
             if (instructionCachePosition.getTag() != nextInstructionBlockNumber) { // miss
                 solvedMiss = this.enterCacheMiss(MissType.INSTRUCTION, nextInstructionBlockNumber,
@@ -165,50 +193,56 @@ public class CoreZero extends AbstractCore {
             }
         }
 
-        return this.instructionCache.getInstructionCachePosition(nextInstructionCachePosition).getInstructionBlock();
+        return instructionCachePosition.getInstructionBlock();
     }
 
-    private boolean enterCacheMiss(MissType missType, int nextBlockNumber, int nextCachePosition, DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
+    @Override
+    protected void blockDataCachePosition(int dataCachePosition) {
+        while (this.reservedDataCachePosition == dataCachePosition) {
+            this.advanceClockCycle();
+        }
+        DataCachePosition cachePosition = this.dataCache.getDataCachePosition(dataCachePosition);
+        while (!cachePosition.tryLock()) {
+            this.advanceClockCycle();
+        }
+    }
+
+    private boolean enterCacheMiss(MissType missType, int nextBlockNumber, int nextCachePosition,
+                                   DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
         boolean solvedMiss = true;
 
-        ContextQueue contextQueue = this.simulationController.getContextQueue();
         if (this.waitingContext != null) { // there is a waiting context,
-            this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
-                    nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
-            this.changeContext = ContextChange.BRING_WAITING;
-            this.advanceClockCycleChangingContext();
-            this.missHandler.start();
 
-            if (missType == MissType.INSTRUCTION)
-                solvedMiss = false;
+            this.setMissHandler(new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
+                    nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister));
+            this.setChangeContext(ContextChange.BRING_WAITING_START_MISS_HANDLER);
 
-        } else if (this.missHandler != null) { // miss handler is running, must try to solve by itself
-            solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
+        } else if (this.missHandler != null) { // miss handler is running, must wait till it finishes
+            solvedMiss = false;
 
         } else { // miss handler is not running and there is no waiting context
-            this.missHandler = new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
-                    nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
 
+            ContextQueue contextQueue = this.simulationController.getContextQueue();
             while (!contextQueue.tryLock())
                 this.advanceClockCycle();
 
-            Context nextContext = contextQueue.getNextContext();
-            if (nextContext != null) {
-                nextContext.setOldContext(false);
-                this.currentContext = nextContext;
-                this.missHandler.start();
+            this.setNextContext(contextQueue.getNextContext());
+            if (this.nextContext != null) {
 
-                if (missType == MissType.INSTRUCTION)
-                    solvedMiss = false;
+                this.setMissHandler(new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
+                        nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister));
+
+                this.setChangeContext(ContextChange.NEXT_CONTEXT_START_MISS_HANDLER);
 
             } else {
-                this.missHandler = null;
-                solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister);
+                solvedMiss = this.solveMissLocally(missType, nextBlockNumber, nextCachePosition, dataCachePosition,
+                        dataCachePositionOffset, finalRegister);
             }
 
             contextQueue.unlock();
         }
 
+        this.advanceClockCycle();
         return solvedMiss;
     }
 
@@ -217,18 +251,32 @@ public class CoreZero extends AbstractCore {
 
         switch (missType) {
             case INSTRUCTION:
-                return this.solveInstructionMissLocally(nextBlockNumber, nextCachePosition);
+                return this.solveInstructionMiss(nextBlockNumber, nextCachePosition);
+
             case LOAD:
-                return this.solveDataLoadMiss(nextBlockNumber, dataCachePosition, dataCachePositionOffset, nextCachePosition, finalRegister, this);
+                return this.solveDataLoadMiss(nextBlockNumber, dataCachePosition, dataCachePositionOffset, nextCachePosition,
+                        finalRegister, this);
+
             case STORE:
-                return this.solveDataStoreMiss(nextBlockNumber, dataCachePosition, dataCachePositionOffset, nextCachePosition, finalRegister, this);
+                return this.solveDataStoreMiss(nextBlockNumber, dataCachePosition, dataCachePositionOffset, nextCachePosition,
+                        finalRegister, this);
+
             default:
                 throw new IllegalArgumentException("Invalid Miss Type in core zero.");
         }
     }
 
+    public boolean solveInstructionMiss(int nextBlockNumber, int nextCachePosition) {
+
+        this.setReservedInstructionCachePosition(nextCachePosition);
+        this.instructionCache.getInstructionBlockFromMemory(nextBlockNumber, nextCachePosition, this);
+        this.setReservedInstructionCachePosition(-1);
+        return true;
+
+    }
+
     public boolean solveDataLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister, AbstractThread callingThread) {
-        if(this.getReservedDataCachePosition() != -1) {
+        if (this.getReservedDataCachePosition() != -1) {
             return false;
         } else {
             this.setReservedDataCachePosition(dataCachePositionNumber);
@@ -272,11 +320,8 @@ public class CoreZero extends AbstractCore {
     }
 
     public boolean solveDataStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int value, AbstractThread callingThread) {
-        if(this.getReservedDataCachePosition() != -1) {
-            if (callingThread instanceof CoreZero)
-                ((CoreZero)callingThread).advanceClockCycleChangingContext();
-            else
-                callingThread.advanceClockCycle();
+        if (this.getReservedDataCachePosition() != -1) {
+            callingThread.advanceClockCycle();
             return false;
         } else {
             this.setReservedDataCachePosition(dataCachePositionNumber);
@@ -285,10 +330,7 @@ public class CoreZero extends AbstractCore {
         DataBus dataBus = this.dataCache.getDataBus();
 
         if (!dataBus.tryLock()) {
-            if (callingThread instanceof CoreZero)
-                ((CoreZero)callingThread).advanceClockCycleChangingContext();
-            else
-                callingThread.advanceClockCycle();
+            callingThread.advanceClockCycle();
             return false;
         }
 
@@ -335,70 +377,44 @@ public class CoreZero extends AbstractCore {
         return true;
     }
 
-    public boolean solveInstructionMissLocally(int nextBlockNumber, int nextCachePosition) {
-        if (this.reservedInstructionCachePosition == -1) { // there is no other cache position reserved
-            this.setReservedInstructionCachePosition(nextCachePosition);
-            this.instructionCache.getInstructionBlockFromMemory(nextBlockNumber, nextCachePosition, this);
-            this.setReservedInstructionCachePosition(-1);
-            return true;
+    @Override
+    protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
+        return this.enterCacheMiss(MissType.LOAD, blockNumber, dataCachePositionNumber, dataCachePosition, positionOffset, finalRegister);
+    }
+
+    @Override
+    protected boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
+        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
+
+        return this.enterCacheMiss(MissType.STORE, blockNumber, dataCachePositionNumber, dataCachePosition, positionOffset, value);
+    }
+
+    private void solvedMiss() {
+
+        if (this.waitingContext.isOldContext() && !this.contextFinished &&
+                this.changeContext != ContextChange.BRING_WAITING) {
+            // If the context is the old one, the current context has not finished and someone isn-t trying to bring the
+            // waiting context, put the context change in swap context.
+            this.setChangeContext(ContextChange.SWAP_CONTEXTS);
         }
 
-        this.advanceClockCycle();
-        return false;
     }
-
-    private void solvedMiss(Context solvedMissContext) {
-
-        if (this.waitingContext.isOldContext() && this.changeContext != ContextChange.BRING_WAITING) // miss was resolved in old thread
-            this.setChangeContext(ContextChange.SWAP);
-
-    }
-
 
     public void finishMissHandlerExecution() {
-        this.solvedMiss(this.missHandler.getCurrentContext());
-        this.missHandler = null;
+        this.solvedMiss();
+        this.setMissHandler(null);
     }
 
-    public void changeContext() {
-
-        switch (this.changeContext) {
-            case SWAP:
-                Context tempContext = currentContext;
-                this.currentContext = this.waitingContext;
-                this.setWaitingContext(tempContext);
-                break;
-            case BRING_WAITING:
-                this.currentContext = this.waitingContext;
-                this.currentContext.setOldContext(true);
-                this.setWaitingContext(null);
-                break;
-        }
-
-        this.setChangeContext(ContextChange.NONE);
-    }
-
-    public boolean isWaitingForReservation() {
-        return waitingForReservation;
-    }
-
-    public void setWaitingForReservation(boolean waitingForReservation) {
-        this.waitingForReservation = waitingForReservation;
-    }
-
-    public ContextChange isChangeContext() {
-        return changeContext;
-    }
-
-    public synchronized void setChangeContext(ContextChange changeContext) {
-        this.changeContext = changeContext;
+    @Override
+    public void printContext() {
+        super.printContext();
     }
 
     public MissHandler getMissHandler() {
         return missHandler;
     }
 
-    public void setMissHandler(MissHandler missHandler) {
+    public synchronized void setMissHandler(MissHandler missHandler) {
         this.missHandler = missHandler;
     }
 
@@ -414,7 +430,7 @@ public class CoreZero extends AbstractCore {
         return reservedDataCachePosition;
     }
 
-    public void setReservedDataCachePosition(int reservedDataCachePosition) {
+    public synchronized void setReservedDataCachePosition(int reservedDataCachePosition) {
         this.reservedDataCachePosition = reservedDataCachePosition;
     }
 
@@ -426,4 +442,11 @@ public class CoreZero extends AbstractCore {
         this.reservedInstructionCachePosition = reservedInstructionCachePosition;
     }
 
+    public boolean isContextFinished() {
+        return contextFinished;
+    }
+
+    public synchronized void setContextFinished(boolean contextFinished) {
+        this.contextFinished = contextFinished;
+    }
 }

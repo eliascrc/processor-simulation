@@ -24,6 +24,7 @@ import java.util.concurrent.Phaser;
  */
 public class SimulationController {
 
+    private int maxQuantum;
     private volatile ContextQueue contextQueue;
     private volatile ArrayList<Context> finishedContexts;
     private volatile InstructionBus instructionBus;
@@ -32,7 +33,7 @@ public class SimulationController {
     private CoreOne coreOne;
     private int simulationTicks;
 
-    public SimulationController() {
+    public SimulationController(int maxQuantum) {
         this.contextQueue = new ContextQueue();
         this.finishedContexts = new ArrayList<>();
         this.instructionBus = new InstructionBus(new InstructionBlock[SimulationConstants.TOTAL_INSTRUCTION_BLOCKS]);
@@ -47,6 +48,7 @@ public class SimulationController {
         this.dataBus = new DataBus(dataBlocks);
 
         this.simulationTicks = 0;
+        this.maxQuantum = maxQuantum;
     }
 
     private void parseContextFile () {
@@ -60,9 +62,8 @@ public class SimulationController {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Ingrese el Quantum maximo: ");
 
-        int maxQuantum = scanner.nextInt();
-        while (maxQuantum < 1) {
-            maxQuantum = scanner.nextInt();
+        while (this.maxQuantum < 1) {
+            this.maxQuantum = scanner.nextInt();
         }
 
         Phaser simulationBarrier = new Phaser();

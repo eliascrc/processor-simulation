@@ -73,8 +73,8 @@ public class Context {
         this.executionTics++;
     }
 
-    public void incrementPC(int increment) {
-        this.programCounter += increment;
+    public void incrementPC() {
+        this.programCounter += SimulationConstants.WORD_SIZE;
     }
 
     //----------------------------------------------------------------------------------------

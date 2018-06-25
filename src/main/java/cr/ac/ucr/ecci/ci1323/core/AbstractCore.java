@@ -5,6 +5,7 @@ import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 import cr.ac.ucr.ecci.ci1323.context.Context;
 import cr.ac.ucr.ecci.ci1323.context.ContextQueue;
 import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
+import cr.ac.ucr.ecci.ci1323.exceptions.ContextChangeException;
 import cr.ac.ucr.ecci.ci1323.memory.DataBus;
 import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
@@ -22,10 +23,18 @@ public abstract class AbstractCore extends AbstractThread {
 
     protected DataCache dataCache;
     protected InstructionCache instructionCache;
+
     protected SimulationController simulationController;
+
     protected int maxQuantum;
+
     protected boolean executionFinished;
+
     protected int coreNumber;
+
+    protected volatile ContextChange changeContext;
+
+    protected volatile Context nextContext;
 
     protected AbstractCore(Phaser simulationBarrier, int maxQuantum, Context startingContext,
                            SimulationController simulationController, int totalCachePositions,
@@ -42,7 +51,20 @@ public abstract class AbstractCore extends AbstractThread {
 
         this.executionFinished = false;
         this.coreNumber = coreNumber;
+
+        this.changeContext = ContextChange.NONE;
+        this.nextContext = null;
     }
+
+    protected abstract boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister);
+
+    protected abstract boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value);
+
+    protected abstract void blockDataCachePosition(int dataCachePosition);
+
+    protected abstract void changeContext();
+
+    protected abstract InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition);
 
     protected void executeCore() {
 
@@ -52,25 +74,30 @@ public abstract class AbstractCore extends AbstractThread {
             int nextInstructionCachePosition = this.calculateCachePosition(nextInstructionBlockNumber, this.coreNumber);
             int nextInstructionCachePositionOffset = this.calculateInstructionOffset();
 
-            InstructionBlock instructionBlock = this.getInstructionBlockFromCache(nextInstructionBlockNumber,
-                    nextInstructionCachePosition);
-
-            if (instructionBlock != null) {
+            try {
+                InstructionBlock instructionBlock = this.getInstructionBlockFromCache(nextInstructionBlockNumber,
+                        nextInstructionCachePosition);
 
                 Instruction instructionToExecute = instructionBlock.getInstruction(nextInstructionCachePositionOffset);
-                this.currentContext.incrementPC(SimulationConstants.WORD_SIZE);
+                this.currentContext.incrementPC();
                 this.executeInstruction(instructionToExecute);
 
                 this.currentContext.incrementQuantum();
-                this.advanceClockCycleChangingContext();
 
                 if (instructionToExecute.getOperationCode() != 63 &&
                         this.currentContext.getCurrentQuantum() >= this.maxQuantum) {
                     this.quantumExpired();
                 }
 
-            } else
-                this.advanceClockCycleChangingContext();
+                this.advanceClockCycle();
+
+            } catch (ContextChangeException e) {
+                // If the context changed then check if the quantum passed for the new context
+                if (this.currentContext.getCurrentQuantum() >= this.maxQuantum)
+                    this.quantumExpired();
+
+                // TODO No olvidar soltar locks de posiciones de cache en interrupciones
+            }
 
         }
 
@@ -115,35 +142,27 @@ public abstract class AbstractCore extends AbstractThread {
                 this.executeSW(instruction);
                 break;
             case 63:
-                this.executeFIN(instruction);
+                this.executeFIN();
                 break;
             default:
                 throw new IllegalArgumentException("Invalid instruction operation code");
         }
     }
 
-    protected void executeFIN(Instruction instruction) {
-        this.currentContext.setFinishingCore(this.coreNumber);
-        this.simulationController.addFinishedThread(this.currentContext);
-        this.finishFINExecution();
-    }
-
-//    @Override
-//    public void advanceClockCycle() {
-//        this.simulationBarrier.arriveAndAwaitAdvance();
-//        this.currentContext.incrementClockCycle();
-//        //this.changeContext();
-//        this.simulationBarrier.arriveAndAwaitAdvance();
-//    }
-
-    public void advanceClockCycleChangingContext() {
+    @Override
+    public void advanceClockCycle() {
         this.simulationBarrier.arriveAndAwaitAdvance();
         this.currentContext.incrementClockCycle();
         this.changeContext();
-        this.simulationBarrier.arriveAndAwaitAdvance();
     }
 
-    protected void finishFINExecution() {
+    private void executeFIN() {
+        this.modifiableFINExecution();
+        this.currentContext.setFinishingCore(this.coreNumber);
+        this.simulationController.addFinishedThread(this.currentContext);
+    }
+
+    protected void modifiableFINExecution() {
         ContextQueue contextQueue = this.simulationController.getContextQueue();
 
         // Tries to lock the context queue
@@ -151,11 +170,12 @@ public abstract class AbstractCore extends AbstractThread {
             this.advanceClockCycle();
         }
 
-        Context nextContext = contextQueue.getNextContext();
-        if (nextContext == null) { // checks if there is no other context in the queue
+        this.setNextContext(contextQueue.getNextContext());
+        if (this.nextContext == null) { // checks if there is no other context in the queue
             this.executionFinished = true;
+
         } else { // there is a context waiting in the queue
-            this.currentContext = nextContext;
+            this.setChangeContext(ContextChange.NEXT_CONTEXT);
         }
 
         contextQueue.unlock();
@@ -169,14 +189,14 @@ public abstract class AbstractCore extends AbstractThread {
             this.advanceClockCycle();
         }
 
-        Context nextContext = contextQueue.getNextContext();
-        if (nextContext == null) { // checks if there is no other context in the queue
-            this.currentContext.setCurrentQuantum(SimulationConstants.INITIAL_QUANTUM);
-        } else {
+        this.setNextContext(contextQueue.getNextContext());
+        this.currentContext.setCurrentQuantum(SimulationConstants.INITIAL_QUANTUM);
+
+        if (nextContext != null) { // If there is a context in the queue, bring it to execution
+
             this.currentContext.setOldContext(false);
             contextQueue.pushContext(this.currentContext);
-            nextContext.setOldContext(true);
-            this.currentContext = nextContext;
+            this.setChangeContext(ContextChange.NEXT_CONTEXT);
         }
 
         contextQueue.unlock();
@@ -255,16 +275,6 @@ public abstract class AbstractCore extends AbstractThread {
 
         return true;
     }
-
-    protected abstract boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister);
-
-    protected abstract boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value);
-
-    protected abstract void blockDataCachePosition(int dataCachePosition);
-
-    protected abstract void changeContext();
-
-    protected abstract InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition);
 
     protected void executeDADDI(Instruction instruction) {
         this.getRegisters()[instruction.getField(2)] = this.getRegisters()[instruction.getField(1)]
@@ -355,7 +365,6 @@ public abstract class AbstractCore extends AbstractThread {
      */
     protected int calculateCachePosition(int blockNumber, int coreNumber) {
         if (coreNumber == 0) {
-            //System.exit(500);
             return blockNumber % SimulationConstants.TOTAL_CORE_ZERO_CACHE_POSITIONS;
         }
         return blockNumber % SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS;
@@ -369,7 +378,6 @@ public abstract class AbstractCore extends AbstractThread {
      */
     protected int calculateOtherDataCachePosition(int blockNumber) {
         if (this.coreNumber == 0) {
-            //System.exit(500);
             return blockNumber % SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS;
         }
         return blockNumber % SimulationConstants.TOTAL_CORE_ZERO_CACHE_POSITIONS;
@@ -391,6 +399,30 @@ public abstract class AbstractCore extends AbstractThread {
      */
     protected int calculateInstructionOffset() {
         return (this.currentContext.getProgramCounter() % SimulationConstants.BLOCK_SIZE) / SimulationConstants.INSTRUCTIONS_PER_BLOCK;
+    }
+
+    public void printCaches() {
+        System.out.println("Caches para el Nucleo #" + this.coreNumber);
+
+        System.out.println("Cache de instrucciones:");
+        InstructionCachePosition[] instructionCachePositions = this.instructionCache.getInstructionCachePositions();
+        for (int i = 0; i < instructionCachePositions.length; i++) {
+            System.out.print("Posicion #" + i + ": ");
+            instructionCachePositions[i].print();
+        }
+
+        System.out.println("Cache de datos:");
+        DataCachePosition[] dataCachePositions = this.dataCache.getDataCachePositions();
+        for (int i = 0; i < dataCachePositions.length; i++) {
+            System.out.print("Posicion #" + i + ": ");
+            dataCachePositions[i].print();
+        }
+        System.out.println();
+    }
+
+    public void printContext() {
+        System.out.println("El Contexto #" + this.currentContext.getContextNumber() + " esta corriendo en el Nucleo #" +
+                this.coreNumber);
     }
 
     //----------------------------------------------------------------------------------------
@@ -430,27 +462,20 @@ public abstract class AbstractCore extends AbstractThread {
         this.instructionCache = instructionCache;
     }
 
-    public void printContext() {
-        System.out.println("El Contexto #" + this.currentContext.getContextNumber() + " esta corriendo en el Nucleo #" +
-                this.coreNumber);
+    public ContextChange getChangeContext() {
+        return changeContext;
     }
 
-    public void printCaches() {
-        System.out.println("Caches para el Nucleo #" + this.coreNumber);
-
-        System.out.println("Cache de instrucciones:");
-        InstructionCachePosition[] instructionCachePositions = this.instructionCache.getInstructionCachePositions();
-        for (int i = 0; i < instructionCachePositions.length; i++) {
-            System.out.print("Posicion #" + i + ": ");
-            instructionCachePositions[i].print();
-        }
-
-        System.out.println("Cache de datos:");
-        DataCachePosition[] dataCachePositions = this.dataCache.getDataCachePositions();
-        for (int i = 0; i < dataCachePositions.length; i++) {
-            System.out.print("Posicion #" + i + ": ");
-            dataCachePositions[i].print();
-        }
-        System.out.println();
+    public synchronized void setChangeContext(ContextChange changeContext) {
+        this.changeContext = changeContext;
     }
+
+    public Context getNextContext() {
+        return nextContext;
+    }
+
+    public void setNextContext(Context nextContext) {
+        this.nextContext = nextContext;
+    }
+
 }

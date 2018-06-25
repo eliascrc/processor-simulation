@@ -51,11 +51,11 @@ public class InstructionCache {
 
     public void getInstructionBlockFromMemory(int nextInstructionBlockNumber, int nextInstructionPositionNumber,
                                               AbstractThread callingThread) {
-
         while (!this.instructionBus.tryLock()) {
             callingThread.advanceClockCycle();
         }
         callingThread.advanceClockCycle();
+
         // Advances 40 clock cycles
         for (int i = 0; i < 40; i++) {
             callingThread.advanceClockCycle();

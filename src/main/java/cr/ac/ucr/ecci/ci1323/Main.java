@@ -5,8 +5,33 @@ import cr.ac.ucr.ecci.ci1323.controller.SimulationController;
 public class Main {
 
     public static void main(String[] args) {
-        SimulationController simulationController = new SimulationController();
-        simulationController.runSimulation();
+
+        try {
+
+            for (int i = 0; i < 30; i++) {
+                SimulationController simulationController = new SimulationController(2);
+                simulationController.runSimulation();
+                Thread.sleep(300);
+            }
+
+            for (int i = 0; i < 30; i++) {
+                SimulationController simulationController = new SimulationController(6);
+                simulationController.runSimulation();
+                Thread.sleep(300);
+            }
+
+            for (int i = 0; i < 30; i++) {
+                SimulationController simulationController = new SimulationController(600);
+                simulationController.runSimulation();
+                Thread.sleep(300);
+            }
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.exit(500);
+        }
+
     }
 
 }
