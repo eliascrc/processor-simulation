@@ -65,16 +65,20 @@ public class Context {
         System.out.println("} , Ciclos consumidos = " + this.executionTics + ", Nucleo en que termino: " + this.finishingCore);
     }
 
-    public void incrementQuantum() {
+    public synchronized void incrementQuantum() {
         this.currentQuantum++;
     }
 
-    public void incrementClockCycle() {
+    public synchronized void incrementClockCycle() {
         this.executionTics++;
     }
 
-    public void incrementPC() {
+    public synchronized void incrementPC() {
         this.programCounter += SimulationConstants.WORD_SIZE;
+    }
+
+    public synchronized void decrementPC() {
+        this.programCounter -= SimulationConstants.WORD_SIZE;
     }
 
     //----------------------------------------------------------------------------------------
@@ -135,4 +139,5 @@ public class Context {
     public void setContextNumber(int contextNumber) {
         this.contextNumber = contextNumber;
     }
+
 }

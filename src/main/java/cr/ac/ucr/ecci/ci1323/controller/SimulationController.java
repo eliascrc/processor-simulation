@@ -97,7 +97,7 @@ public class SimulationController {
             System.out.println();
 
             simulationBarrier.arriveAndAwaitAdvance();
-            this.simulationTicks++;
+            this.simulationTicks += 1;
             simulationBarrier.arriveAndAwaitAdvance();
         }
 
@@ -118,6 +118,11 @@ public class SimulationController {
 
         System.out.println("Contextos que finalizaron:");
         for (Context context: this.finishedContexts) {
+
+            if (context.getContextNumber() == 2 && context.getRegisters()[12] == 0) {
+                System.exit(500);
+            }
+
             context.print();
             System.out.println();
         }

@@ -37,6 +37,8 @@ public abstract class AbstractCore extends AbstractThread {
 
     protected volatile Context nextContext;
 
+    protected volatile boolean instructionFinished;
+
     protected AbstractCore(Phaser simulationBarrier, int maxQuantum, Context startingContext,
                            SimulationController simulationController, int totalCachePositions,
                            InstructionBus instructionBus, DataBus dataBus, int coreNumber) {
@@ -55,6 +57,8 @@ public abstract class AbstractCore extends AbstractThread {
 
         this.changeContext = ContextChange.NONE;
         this.nextContext = null;
+
+        this.instructionFinished = true;
     }
 
     protected abstract boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister);
@@ -66,6 +70,8 @@ public abstract class AbstractCore extends AbstractThread {
     protected abstract void changeContext();
 
     protected abstract InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition);
+
+    protected Instruction lastInstruction;
 
     protected void executeCore() {
 
@@ -80,8 +86,11 @@ public abstract class AbstractCore extends AbstractThread {
                         nextInstructionCachePosition);
 
                 Instruction instructionToExecute = instructionBlock.getInstruction(nextInstructionCachePositionOffset);
+                this.lastInstruction = instructionToExecute;
                 this.currentContext.incrementPC();
+                this.setInstructionFinished(false);
                 this.executeInstruction(instructionToExecute);
+                this.setInstructionFinished(true);
 
                 this.currentContext.incrementQuantum();
 
@@ -157,7 +166,6 @@ public abstract class AbstractCore extends AbstractThread {
 
     private void executeFIN() {
         this.modifiableFINExecution();
-        System.out.println("R12: " + this.currentContext.getRegisters()[12]);
         this.currentContext.setFinishingCore(this.coreNumber);
         this.simulationController.addFinishedThread(this.currentContext);
     }
@@ -192,9 +200,10 @@ public abstract class AbstractCore extends AbstractThread {
         this.setNextContext(contextQueue.getNextContext());
         this.currentContext.setCurrentQuantum(SimulationConstants.INITIAL_QUANTUM);
 
-        if (nextContext != null) { // If there is a context in the queue, bring it to execution
+        if (this.nextContext != null) { // If there is a context in the queue, bring it to execution
 
             this.currentContext.setOldContext(false);
+            this.nextContext.setOldContext(true);
             contextQueue.pushContext(this.currentContext);
             this.setChangeContext(ContextChange.NEXT_CONTEXT);
         }
@@ -215,6 +224,7 @@ public abstract class AbstractCore extends AbstractThread {
 
             if (dataCachePosition.getTag() != blockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
                 solvedMiss = this.handleLoadMiss(blockNumber, dataCachePosition, dataCachePositionOffset, dataCachePositionNumber, instruction.getField(2));
+
             } else { // Hit
                 this.currentContext.getRegisters()[instruction.getField(2)] = dataCachePosition.getDataBlock().getWord(dataCachePositionOffset);
                 dataCachePosition.unlock();
@@ -237,45 +247,66 @@ public abstract class AbstractCore extends AbstractThread {
             if (dataCachePosition.getTag() != blockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
                 solvedMiss = this.handleStoreMiss(blockNumber, dataCachePosition, dataCachePositionOffset, value);
             } else { // Hit
-                solvedMiss = this.handleStoreHit(blockNumber, dataCachePosition, dataCachePositionOffset, value);
+                solvedMiss = this.handleStoreHit(blockNumber, dataCachePosition, dataCachePositionNumber, dataCachePositionOffset, value);
             }
-            dataCachePosition.unlock();
         }
     }
 
-    protected boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
+    protected boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int dataCachePositionNumber, int positionOffset, int value) {
         if (dataCachePosition.getState() == CachePositionState.MODIFIED) {
             dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+            dataCachePosition.unlock();
+            this.advanceClockCycle();
             return true;
         }
 
-        // dataCachePosition is shared
-        DataBus dataBus = this.dataCache.getDataBus();
-        if (!dataBus.tryLock()) {
-            this.advanceClockCycle();
+        // Data Cache Position is shared
+        if (!this.coreZeroCanMakeReservation(dataCachePositionNumber)) {
             dataCachePosition.unlock();
+            this.advanceClockCycle();
             return false;
         }
 
+        DataBus dataBus = this.dataCache.getDataBus();
+        if (!dataBus.tryLock()) {
+            dataCachePosition.unlock();
+            this.advanceClockCycle();
+            return false;
+        }
+        this.advanceClockCycle();
+
+        // TODO Candados pueden dar problemas
+
         int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
-        DataCachePosition otherCachePosition = dataBus
-                .getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
+        DataCachePosition otherCachePosition = dataBus.getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
+
         while (!otherCachePosition.tryLock()) {
             this.advanceClockCycle();
         }
         this.advanceClockCycle();
 
-        if (otherCachePosition.getTag() == blockNumber && otherCachePosition.getState() != CachePositionState.INVALID)
+        if (otherCachePosition.getTag() == blockNumber && otherCachePosition.getState() != CachePositionState.SHARED)
             otherCachePosition.setState(CachePositionState.INVALID);
 
         dataCachePosition.setState(CachePositionState.MODIFIED);
         dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+
         otherCachePosition.unlock();
+
+        this.coreZeroRemoveReservation();
+
         dataBus.unlock();
         dataCachePosition.unlock();
 
         return true;
     }
+
+    protected boolean coreZeroCanMakeReservation(int dataCachePositionNumber) {
+        // Core Zero must Override this method
+        return true;
+    }
+
+    protected void coreZeroRemoveReservation() { }
 
     protected void executeDADDI(Instruction instruction) {
         this.getRegisters()[instruction.getField(2)] = this.getRegisters()[instruction.getField(1)]
@@ -341,6 +372,7 @@ public abstract class AbstractCore extends AbstractThread {
         int sourceRegister = this.currentContext.getRegisters()[instruction.getInstructionFields()[1]];
         int immediate = instruction.getInstructionFields()[3];
         int blockNumber = (sourceRegister + immediate) / SimulationConstants.BLOCK_SIZE;
+        System.out.println("@ " + sourceRegister + " " + immediate + " " + blockNumber);
         return blockNumber;
     }
 
@@ -475,8 +507,16 @@ public abstract class AbstractCore extends AbstractThread {
         return nextContext;
     }
 
-    public void setNextContext(Context nextContext) {
+    public synchronized void setNextContext(Context nextContext) {
         this.nextContext = nextContext;
+    }
+
+    public boolean isInstructionFinished() {
+        return instructionFinished;
+    }
+
+    public synchronized void setInstructionFinished(boolean instructionFinished) {
+        this.instructionFinished = instructionFinished;
     }
 
 }

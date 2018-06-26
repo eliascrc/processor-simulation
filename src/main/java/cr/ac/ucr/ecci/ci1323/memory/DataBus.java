@@ -41,7 +41,7 @@ public class DataBus extends Bus {
     public void printMemory() {
         System.out.print("{ ");
         for (DataBlock dataBlock : this.dataMemory) {
-            dataBlock.printBlock();
+            dataBlock.printBlockChangeLine();
         }
         System.out.println(" }");
     }

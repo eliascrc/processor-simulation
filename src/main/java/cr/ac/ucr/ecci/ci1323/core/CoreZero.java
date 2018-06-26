@@ -51,7 +51,14 @@ public class CoreZero extends AbstractCore {
 
 
     public void changeContext() {
-        boolean startMissHandler = false;
+
+        System.out.println("MH: " + this.missHandler + " con contexto " + ((this.missHandler == null)? "null" : this.missHandler.getCurrentContext().getContextNumber()));
+        System.out.println("WC: " + this.waitingContext);
+        System.out.println("FC: " + this.simulationController.getFinishedContexts().size() + " CQ: " + this.simulationController.getContextQueue().size());
+        System.out.println("CF: " + this.contextFinished);
+        System.out.println("EF: " + this.executionFinished);
+        System.out.println("CW: " + this.contextWaitingForReservation);
+        System.out.println("LI: " + this.lastInstruction);
 
         if (this.executionFinished && this.changeContext == ContextChange.SWAP_CONTEXTS) {
             // If the current context has finished or his quantum expired and the miss handler is requesting a swap
@@ -63,6 +70,11 @@ public class CoreZero extends AbstractCore {
 
         switch (this.changeContext) {
             case SWAP_CONTEXTS:
+                if (!this.instructionFinished) {
+                    // The waiting context is gonna take the current context out in some random place
+                    // So, for safety, if the instruction didn't finish decrement the PC and make him repeat it
+                    this.currentContext.decrementPC();
+                }
                 Context tempContext = this.currentContext;
                 this.setCurrentContext(this.waitingContext);
                 this.setWaitingContext(tempContext);
@@ -74,38 +86,20 @@ public class CoreZero extends AbstractCore {
                 this.setWaitingContext(null);
                 break;
 
-            case BRING_WAITING_START_MISS_HANDLER:
-                this.setCurrentContext(this.waitingContext);
-                this.setWaitingContext(null);
-                startMissHandler = true;
-                break;
-
-            case NEXT_CONTEXT_START_MISS_HANDLER:
-                this.setCurrentContext(this.nextContext);
-                this.currentContext.setOldContext(true);
-                this.setNextContext(null);
-                startMissHandler = true;
-                break;
-
             case NEXT_CONTEXT:
                 this.setCurrentContext(this.nextContext);
-                this.currentContext.setOldContext(true);
                 this.setNextContext(null);
                 break;
         }
-
-        System.out.println("MH: " + this.missHandler + " WC: " + this.waitingContext);
 
         ContextChange oldContextChange = this.changeContext;
         this.setChangeContext(ContextChange.NONE);
         this.simulationBarrier.arriveAndAwaitAdvance();
 
-        if (startMissHandler)
-            this.missHandler.start();
-
         if (oldContextChange != ContextChange.NONE) {
             this.setContextFinished(false);
             this.setContextWaitingForReservation(false);
+            this.setInstructionFinished(true);
 
             throw new ContextChangeException();
         }
@@ -201,7 +195,10 @@ public class CoreZero extends AbstractCore {
 
     @Override
     protected void lockDataCachePosition(int dataCachePositionNumber) {
-        while (this.reservedDataCachePosition[0] == dataCachePositionNumber) {
+        int contextNumber = this.currentContext.getContextNumber();
+
+        while (this.getReservedDataCachePosition()[1] != -1 && this.getReservedDataCachePosition()[1] != contextNumber &&
+                this.getReservedDataCachePosition()[0] == dataCachePositionNumber) {
             this.advanceClockCycle();
         }
 
@@ -224,7 +221,8 @@ public class CoreZero extends AbstractCore {
 
             this.setMissHandler(new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                     nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister));
-            this.setChangeContext(ContextChange.BRING_WAITING_START_MISS_HANDLER);
+            this.setChangeContext(ContextChange.BRING_WAITING);
+            this.missHandler.start();
 
             if (dataCachePosition != null) {
                 dataCachePosition.unlock();
@@ -250,7 +248,8 @@ public class CoreZero extends AbstractCore {
                 this.setMissHandler(new MissHandler(this, this.currentContext, missType, this.simulationBarrier,
                         nextBlockNumber, nextCachePosition, dataCachePosition, dataCachePositionOffset, finalRegister));
 
-                this.setChangeContext(ContextChange.NEXT_CONTEXT_START_MISS_HANDLER);
+                this.setChangeContext(ContextChange.NEXT_CONTEXT);
+                this.missHandler.start();
 
                 if (dataCachePosition != null) {
                     dataCachePosition.unlock();
@@ -302,9 +301,11 @@ public class CoreZero extends AbstractCore {
 
         int reservingContext = this.getReservedDataCachePosition()[1];
         int contextNumber = callingThread.currentContext.getContextNumber();
+
+        // If there is another context with a reservation
         if (reservingContext != -1 && reservingContext != contextNumber) {
             dataCachePosition.unlock();
-            this.advanceClockCycle();
+            callingThread.advanceClockCycle();
             return false;
         }
 
@@ -317,7 +318,7 @@ public class CoreZero extends AbstractCore {
             callingThread.advanceClockCycle();
             return false;
         }
-        this.advanceClockCycle();
+        callingThread.advanceClockCycle();
 
         if (dataCachePosition.getTag() != blockNumber && dataCachePosition.getState() == CachePositionState.MODIFIED) {
             this.dataCache.writeBlockToMemory(dataCachePosition, callingThread);
@@ -348,65 +349,86 @@ public class CoreZero extends AbstractCore {
         return true;
     }
 
+    @Override
+    protected boolean coreZeroCanMakeReservation(int dataCachePositionNumber) {
+        int reservingContext = this.getReservedDataCachePosition()[1];
+        int contextNumber = this.currentContext.getContextNumber();
+
+        // If there is some other context that reserved a position
+        if (reservingContext != -1 && reservingContext != contextNumber) {
+            return false;
+        }
+
+        this.setReservedDataCachePosition(dataCachePositionNumber, this.currentContext.getContextNumber());
+        return true;
+    }
+
+    protected void coreZeroRemoveReservation() {
+        this.setReservedDataCachePosition(-1, -1);
+    }
+
     public boolean solveDataStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset,
                                       int dataCachePositionNumber, int value, AbstractThread callingThread) {
 
         int reservingContext = this.getReservedDataCachePosition()[1];
         int contextNumber = callingThread.currentContext.getContextNumber();
+
         if (reservingContext != -1 && reservingContext != contextNumber) {
+            dataCachePosition.unlock();
             callingThread.advanceClockCycle();
             return false;
 
-        } else {
-            this.setReservedDataCachePosition(dataCachePositionNumber, contextNumber);
         }
+        this.setReservedDataCachePosition(dataCachePositionNumber, contextNumber);
 
         DataBus dataBus = this.dataCache.getDataBus();
-
         if (!dataBus.tryLock()) {
+            dataCachePosition.unlock();
             callingThread.advanceClockCycle();
             return false;
         }
+        callingThread.advanceClockCycle();
 
-        this.advanceClockCycle();
         if (dataCachePosition.getTag() != blockNumber && dataCachePosition.getState() == CachePositionState.MODIFIED) {
-            this.dataCache.writeBlockToMemory(dataCachePosition, this);
-            dataCachePosition.setState(CachePositionState.SHARED);
+            this.dataCache.writeBlockToMemory(dataCachePosition, callingThread);
         }
 
-        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
-        DataCachePosition otherDataCachePosition = dataBus
-                .getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(blockNumber);
+        DataCachePosition otherDataCachePosition = dataBus.getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
+
         while (!otherDataCachePosition.tryLock()) {
             callingThread.advanceClockCycle();
         }
         callingThread.advanceClockCycle();
 
         if (otherDataCachePosition.getTag() != blockNumber || otherDataCachePosition.getState() == CachePositionState.INVALID) {
-            this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, this);
+            this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, callingThread);
             dataCachePosition.setState(CachePositionState.MODIFIED);
+
         } else {
             switch (otherDataCachePosition.getState()) {
                 case MODIFIED:
+                    this.dataCache.writeBlockToMemory(otherDataCachePosition, callingThread);
                     otherDataCachePosition.setState(CachePositionState.INVALID);
-                    dataBus.writeBlockToMemory(otherDataCachePosition.getDataBlock(), otherDataCachePosition.getTag());
-                    dataCachePosition.setDataBlock(otherDataCachePosition.getDataBlock().clone());
+
+                    this.dataCache.setPositionFromAnother(dataCachePosition, otherDataCachePosition);
                     dataCachePosition.setState(CachePositionState.MODIFIED);
                     break;
 
                 case SHARED:
                     otherDataCachePosition.setState(CachePositionState.INVALID);
-                    dataCachePosition.setDataBlock(dataBus.getMemoryBlock(blockNumber).clone());
+
+                    this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, callingThread);
                     dataCachePosition.setState(CachePositionState.MODIFIED);
                     break;
             }
         }
 
-        dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
-        dataCachePosition.setTag(blockNumber);
         otherDataCachePosition.unlock();
-        this.setReservedDataCachePosition(-1, -1);
+        dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
         dataBus.unlock();
+        dataCachePosition.unlock();
+        this.setReservedDataCachePosition(-1, -1);
 
         return true;
     }

@@ -27,6 +27,13 @@ public class DataBlock implements Cloneable {
         }
     }
 
+    public void printBlockChangeLine() {
+        for (int i = 0; i < this.words.length; i++) {
+            System.out.print(this.words[i] + "\t");
+        }
+        System.out.println();
+    }
+
     public int[] getWords() {
         return this.words;
     }
