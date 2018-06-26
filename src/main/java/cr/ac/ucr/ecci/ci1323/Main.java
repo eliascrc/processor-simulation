@@ -8,22 +8,22 @@ public class Main {
 
         try {
 
-            for (int i = 0; i < 30; i++) {
+            for (int i = 0; i < 20; i++) {
                 SimulationController simulationController = new SimulationController(2);
                 simulationController.runSimulation();
-                Thread.sleep(300);
+                Thread.sleep(20);
             }
 
-            for (int i = 0; i < 30; i++) {
+            for (int i = 0; i < 20; i++) {
                 SimulationController simulationController = new SimulationController(6);
                 simulationController.runSimulation();
-                Thread.sleep(300);
+                Thread.sleep(20);
             }
 
-            for (int i = 0; i < 30; i++) {
+            for (int i = 0; i < 20; i++) {
                 SimulationController simulationController = new SimulationController(600);
                 simulationController.runSimulation();
-                Thread.sleep(300);
+                Thread.sleep(20);
             }
 
         } catch (InterruptedException e) {

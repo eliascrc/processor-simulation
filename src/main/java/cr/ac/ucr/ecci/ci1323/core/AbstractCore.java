@@ -21,16 +21,17 @@ import java.util.concurrent.Phaser;
  */
 public abstract class AbstractCore extends AbstractThread {
 
-    protected DataCache dataCache;
-    protected InstructionCache instructionCache;
+    protected volatile DataCache dataCache;
 
-    protected SimulationController simulationController;
+    protected volatile InstructionCache instructionCache;
 
-    protected int maxQuantum;
+    protected volatile SimulationController simulationController;
 
-    protected boolean executionFinished;
+    protected volatile int maxQuantum;
 
-    protected int coreNumber;
+    protected volatile boolean executionFinished;
+
+    protected volatile int coreNumber;
 
     protected volatile ContextChange changeContext;
 
@@ -60,7 +61,7 @@ public abstract class AbstractCore extends AbstractThread {
 
     protected abstract boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value);
 
-    protected abstract void blockDataCachePosition(int dataCachePosition);
+    protected abstract void lockDataCachePosition(int dataCachePositionNumber);
 
     protected abstract void changeContext();
 
@@ -95,8 +96,6 @@ public abstract class AbstractCore extends AbstractThread {
                 // If the context changed then check if the quantum passed for the new context
                 if (this.currentContext.getCurrentQuantum() >= this.maxQuantum)
                     this.quantumExpired();
-
-                // TODO No olvidar soltar locks de posiciones de cache en interrupciones
             }
 
         }
@@ -158,6 +157,7 @@ public abstract class AbstractCore extends AbstractThread {
 
     private void executeFIN() {
         this.modifiableFINExecution();
+        System.out.println("R12: " + this.currentContext.getRegisters()[12]);
         this.currentContext.setFinishingCore(this.coreNumber);
         this.simulationController.addFinishedThread(this.currentContext);
     }
@@ -202,6 +202,27 @@ public abstract class AbstractCore extends AbstractThread {
         contextQueue.unlock();
     }
 
+    protected void executeLW(Instruction instruction) {
+
+        int blockNumber = this.calculateDataBlockNumber(instruction);
+        int dataCachePositionOffset = this.calculateDataOffset(instruction);
+        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
+        DataCachePosition dataCachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
+
+        boolean solvedMiss = false;
+        while (!solvedMiss) {
+            this.lockDataCachePosition(dataCachePositionNumber);
+
+            if (dataCachePosition.getTag() != blockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
+                solvedMiss = this.handleLoadMiss(blockNumber, dataCachePosition, dataCachePositionOffset, dataCachePositionNumber, instruction.getField(2));
+            } else { // Hit
+                this.currentContext.getRegisters()[instruction.getField(2)] = dataCachePosition.getDataBlock().getWord(dataCachePositionOffset);
+                dataCachePosition.unlock();
+                solvedMiss = true;
+            }
+        }
+    }
+
     protected void executeSW(Instruction instruction) {
         int blockNumber = this.calculateDataBlockNumber(instruction);
         int dataCachePositionOffset = this.calculateDataOffset(instruction);
@@ -211,32 +232,12 @@ public abstract class AbstractCore extends AbstractThread {
 
         boolean solvedMiss = false;
         while (!solvedMiss) {
-            this.blockDataCachePosition(dataCachePositionNumber);
+            this.lockDataCachePosition(dataCachePositionNumber);
 
             if (dataCachePosition.getTag() != blockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
                 solvedMiss = this.handleStoreMiss(blockNumber, dataCachePosition, dataCachePositionOffset, value);
             } else { // Hit
                 solvedMiss = this.handleStoreHit(blockNumber, dataCachePosition, dataCachePositionOffset, value);
-            }
-            dataCachePosition.unlock();
-        }
-    }
-
-    protected void executeLW(Instruction instruction) {
-
-        boolean solvedMiss = false;
-        while (!solvedMiss) {
-            int blockNumber = this.calculateDataBlockNumber(instruction);
-            int dataCachePositionOffset = this.calculateDataOffset(instruction);
-            int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
-            DataCachePosition dataCachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
-            this.blockDataCachePosition(dataCachePositionNumber);
-
-            if (dataCachePosition.getTag() != blockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
-                solvedMiss = this.handleLoadMiss(blockNumber, dataCachePosition, dataCachePositionOffset, dataCachePositionNumber, instruction.getField(2));
-            } else { // Hit
-                this.currentContext.getRegisters()[instruction.getField(2)] = dataCachePosition.getDataBlock().getWord(dataCachePositionOffset);
-                solvedMiss = true;
             }
             dataCachePosition.unlock();
         }

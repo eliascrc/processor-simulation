@@ -37,15 +37,26 @@ public class DataCache {
         }
 
         this.getDataBus().writeBlockToMemory(dataCachePosition.getDataBlock(), dataCachePosition.getTag());
-        dataCachePosition.setState(CachePositionState.INVALID);
+        dataCachePosition.setState(CachePositionState.SHARED);
 
     }
 
     public void getBlockFromMemory(int dataBlockNumber, int dataPositionNumber, AbstractThread callingThread) {
 
-        this.dataCachePositions[dataPositionNumber].setDataBlock(
-                this.dataBus.getMemoryBlock(dataBlockNumber).clone());
+        // Advances 40 clock cycles
+        for (int i = 0; i < 40; i++) {
+            callingThread.advanceClockCycle();
+        }
+
+        this.dataCachePositions[dataPositionNumber].setDataBlock(this.dataBus.getMemoryBlock(dataBlockNumber).clone());
         this.dataCachePositions[dataPositionNumber].setState(CachePositionState.SHARED);
+        this.dataCachePositions[dataPositionNumber].setTag(dataBlockNumber);
+    }
+
+    public void setPositionFromAnother(DataCachePosition dataCachePosition, DataCachePosition otherDataCachePosition) {
+        dataCachePosition.setDataBlock(otherDataCachePosition.getDataBlock().clone());
+        dataCachePosition.setState(CachePositionState.SHARED);
+        dataCachePosition.setTag(otherDataCachePosition.getTag());
     }
 
     public DataCachePosition[] getDataCachePositions() {

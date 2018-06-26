@@ -8,13 +8,13 @@ import java.util.concurrent.Phaser;
 
 public class MissHandler extends AbstractThread {
 
-    private CoreZero coreZero;
-    private MissType missType;
-    private int nextCachePosition;
-    private int nextBlockNumber;
-    private DataCachePosition dataCachePosition;
-    private int dataCachePositionOffset;
-    private int finalRegister;
+    private volatile CoreZero coreZero;
+    private volatile MissType missType;
+    private volatile int nextCachePosition;
+    private volatile int nextBlockNumber;
+    private volatile DataCachePosition dataCachePosition;
+    private volatile int dataCachePositionOffset;
+    private volatile int finalRegister;
 
     MissHandler(CoreZero coreZero, Context context, MissType missType, Phaser simulationBarrier, int nextBlockNumber,
                 int nextCachePosition, DataCachePosition dataCachePosition, int dataCachePositionOffset, int finalRegister) {
@@ -68,31 +68,19 @@ public class MissHandler extends AbstractThread {
         boolean solvedMiss = false;
         while (!solvedMiss) {
 
-            while(this.coreZero.getReservedDataCachePosition() == this.nextCachePosition) {
-                this.advanceClockCycle();
-            }
-
             while (!this.dataCachePosition.tryLock()) {
                 this.advanceClockCycle();
             }
 
-            if (dataCachePosition.getTag() != this.nextBlockNumber || dataCachePosition.getState() == CachePositionState.INVALID) {
-                solvedMiss = this.coreZero.solveDataLoadMiss(this.nextBlockNumber, this.dataCachePosition, this.dataCachePositionOffset, this.nextCachePosition, this.finalRegister, this);
-            } else { // Hit
-                this.currentContext.getRegisters()[this.finalRegister] = dataCachePosition.getDataBlock().getWord(dataCachePositionOffset);
-                solvedMiss = true;
-            }
-            dataCachePosition.unlock();
+            solvedMiss = this.coreZero.solveDataLoadMiss(this.nextBlockNumber, this.dataCachePosition,
+                        this.dataCachePositionOffset, this.nextCachePosition, this.finalRegister, this);
+
         }
     }
 
     private void solveDataStoreMiss() {
         boolean solvedMiss = false;
         while (!solvedMiss) {
-
-            while(this.coreZero.getReservedDataCachePosition() == this.nextCachePosition) {
-                this.advanceClockCycle();
-            }
 
             while (!this.dataCachePosition.tryLock()) {
                 this.advanceClockCycle();

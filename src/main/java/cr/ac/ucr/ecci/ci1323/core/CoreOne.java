@@ -61,19 +61,27 @@ public class CoreOne extends AbstractCore {
     }
 
     @Override
+    protected void lockDataCachePosition(int dataCachePositionNumber) {
+        DataCachePosition cachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
+        while (!cachePosition.tryLock()) {
+            this.advanceClockCycle();
+        }
+    }
+
+    @Override
     protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
 
         DataBus dataBus = this.dataCache.getDataBus();
 
         if (!dataBus.tryLock()) {
+            dataCachePosition.unlock();
             this.advanceClockCycle();
             return false;
         }
-
         this.advanceClockCycle();
+
         if (dataCachePosition.getTag() != blockNumber && dataCachePosition.getState() == CachePositionState.MODIFIED) {
             this.dataCache.writeBlockToMemory(dataCachePosition, this);
-
         }
 
         int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(blockNumber);
@@ -86,16 +94,17 @@ public class CoreOne extends AbstractCore {
 
         if (otherDataCachePosition.getTag() == blockNumber && otherDataCachePosition.getState() == CachePositionState.MODIFIED) {
             this.dataCache.writeBlockToMemory(otherDataCachePosition, this);
-            dataCachePosition.setDataBlock(otherDataCachePosition.getDataBlock().clone());
+            this.dataCache.setPositionFromAnother(dataCachePosition, otherDataCachePosition);
             otherDataCachePosition.setState(CachePositionState.SHARED);
+
         } else {
             this.dataCache.getBlockFromMemory(blockNumber, dataCachePositionNumber, this);
         }
 
         otherDataCachePosition.unlock();
-        dataCachePosition.setTag(blockNumber);
         this.currentContext.getRegisters()[finalRegister] = dataCachePosition.getDataBlock().getWord(positionOffset);
         dataBus.unlock();
+        dataCachePosition.unlock();
         return true;
     }
 
@@ -150,14 +159,6 @@ public class CoreOne extends AbstractCore {
         dataBus.unlock();
 
         return true;
-    }
-
-    @Override
-    protected void blockDataCachePosition(int dataCachePosition) {
-        DataCachePosition cachePosition = this.dataCache.getDataCachePosition(dataCachePosition);
-        while (!cachePosition.tryLock()) {
-            this.advanceClockCycle();
-        }
     }
 
 

@@ -6,8 +6,8 @@ import java.util.concurrent.Phaser;
 
 public abstract class AbstractThread extends Thread {
 
-    protected Phaser simulationBarrier;
-    protected Context currentContext;
+    protected volatile Phaser simulationBarrier;
+    protected volatile Context currentContext;
 
     AbstractThread(Phaser simulationBarrier, Context currentContext) {
         this.simulationBarrier = simulationBarrier;

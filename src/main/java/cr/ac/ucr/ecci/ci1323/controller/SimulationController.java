@@ -24,14 +24,14 @@ import java.util.concurrent.Phaser;
  */
 public class SimulationController {
 
-    private int maxQuantum;
+    private volatile int maxQuantum;
     private volatile ContextQueue contextQueue;
     private volatile ArrayList<Context> finishedContexts;
     private volatile InstructionBus instructionBus;
     private volatile DataBus dataBus;
-    private CoreZero coreZero;
-    private CoreOne coreOne;
-    private int simulationTicks;
+    private volatile CoreZero coreZero;
+    private volatile CoreOne coreOne;
+    private volatile int simulationTicks;
 
     public SimulationController(int maxQuantum) {
         this.contextQueue = new ContextQueue();

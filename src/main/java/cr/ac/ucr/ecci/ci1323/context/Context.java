@@ -31,14 +31,14 @@ public class Context {
      */
     private volatile int contextNumber;
 
-    private int currentQuantum;
+    private volatile int currentQuantum;
 
     /**
      * Defines the priority of the context.
      */
-    private boolean isOldContext;
+    private volatile boolean isOldContext;
 
-    private int finishingCore;
+    private volatile int finishingCore;
 
 
     /**

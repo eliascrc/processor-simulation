@@ -4,7 +4,7 @@ import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 
 public class Instruction {
 
-    private int[] instructionFields;
+    private volatile int[] instructionFields;
 
     public Instruction(int[] instructionFields) {
         this.instructionFields = instructionFields;
