@@ -97,6 +97,22 @@ public class CoreZero extends AbstractCore {
         this.simulationBarrier.arriveAndAwaitAdvance();
 
         if (oldContextChange != ContextChange.NONE) {
+
+            if (this.lockedDataCachePosition != null) {
+                this.lockedDataCachePosition.unlock();
+                this.lockedDataCachePosition = null;
+            }
+
+            if (this.lockedOtherDataCachePosition != null) {
+                this.lockedOtherDataCachePosition.unlock();
+                this.lockedOtherDataCachePosition = null;
+            }
+
+            if (this.lockedDataBus != null) {
+                this.lockedDataBus.unlock();
+                this.lockedDataBus = null;
+            }
+
             this.setContextFinished(false);
             this.setContextWaitingForReservation(false);
             this.setInstructionFinished(true);
@@ -199,11 +215,13 @@ public class CoreZero extends AbstractCore {
 
         while (this.getReservedDataCachePosition()[1] != -1 && this.getReservedDataCachePosition()[1] != contextNumber &&
                 this.getReservedDataCachePosition()[0] == dataCachePositionNumber) {
+            System.out.println("Waiting Reservation");
             this.advanceClockCycle();
         }
 
         DataCachePosition cachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
         while (!cachePosition.tryLock()) {
+            System.out.println("Waiting Lock");
             this.advanceClockCycle();
         }
     }

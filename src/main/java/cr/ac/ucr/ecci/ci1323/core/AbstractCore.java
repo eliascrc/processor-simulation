@@ -11,6 +11,10 @@ import cr.ac.ucr.ecci.ci1323.memory.Instruction;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.Phaser;
 
 /**
@@ -38,6 +42,12 @@ public abstract class AbstractCore extends AbstractThread {
     protected volatile Context nextContext;
 
     protected volatile boolean instructionFinished;
+
+    protected volatile DataBus lockedDataBus;
+
+    protected volatile DataCachePosition lockedDataCachePosition;
+
+    protected volatile DataCachePosition lockedOtherDataCachePosition;
 
     protected AbstractCore(Phaser simulationBarrier, int maxQuantum, Context startingContext,
                            SimulationController simulationController, int totalCachePositions,
@@ -273,9 +283,10 @@ public abstract class AbstractCore extends AbstractThread {
             this.advanceClockCycle();
             return false;
         }
-        this.advanceClockCycle();
 
-        // TODO Candados pueden dar problemas
+        this.setLockedDataCachePosition(dataCachePosition);
+        this.setLockedDataBus(dataBus);
+        this.advanceClockCycle();
 
         int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
         DataCachePosition otherCachePosition = dataBus.getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
@@ -283,6 +294,8 @@ public abstract class AbstractCore extends AbstractThread {
         while (!otherCachePosition.tryLock()) {
             this.advanceClockCycle();
         }
+
+        this.setLockedOtherDataCachePosition(otherCachePosition);
         this.advanceClockCycle();
 
         if (otherCachePosition.getTag() == blockNumber && otherCachePosition.getState() != CachePositionState.SHARED)
@@ -292,11 +305,15 @@ public abstract class AbstractCore extends AbstractThread {
         dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
 
         otherCachePosition.unlock();
+        this.lockedOtherDataCachePosition = null;
 
         this.coreZeroRemoveReservation();
 
         dataBus.unlock();
+        this.lockedDataBus = null;
+
         dataCachePosition.unlock();
+        this.lockedDataCachePosition = null;
 
         return true;
     }
@@ -517,6 +534,30 @@ public abstract class AbstractCore extends AbstractThread {
 
     public synchronized void setInstructionFinished(boolean instructionFinished) {
         this.instructionFinished = instructionFinished;
+    }
+
+    public DataBus getLockedDataBus() {
+        return lockedDataBus;
+    }
+
+    public synchronized void setLockedDataBus(DataBus lockedDataBus) {
+        this.lockedDataBus = lockedDataBus;
+    }
+
+    public DataCachePosition getLockedDataCachePosition() {
+        return lockedDataCachePosition;
+    }
+
+    public void setLockedDataCachePosition(DataCachePosition lockedDataCachePosition) {
+        this.lockedDataCachePosition = lockedDataCachePosition;
+    }
+
+    public DataCachePosition getLockedOtherDataCachePosition() {
+        return lockedOtherDataCachePosition;
+    }
+
+    public void setLockedOtherDataCachePosition(DataCachePosition lockedOtherDataCachePosition) {
+        this.lockedOtherDataCachePosition = lockedOtherDataCachePosition;
     }
 
 }

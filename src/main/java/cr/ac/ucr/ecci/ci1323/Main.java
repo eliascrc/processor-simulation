@@ -8,19 +8,19 @@ public class Main {
 
         try {
 
-            for (int i = 0; i < 1; i++) {
+            for (int i = 0; i < 20; i++) {
                 SimulationController simulationController = new SimulationController(2);
                 simulationController.runSimulation();
                 Thread.sleep(500);
             }
 
-            for (int i = 0; i < 1; i++) {
+            for (int i = 0; i < 20; i++) {
                 SimulationController simulationController = new SimulationController(13);
                 simulationController.runSimulation();
                 Thread.sleep(500);
             }
 
-            for (int i = 0; i < 1; i++) {
+            for (int i = 0; i < 20; i++) {
                 SimulationController simulationController = new SimulationController(600);
                 simulationController.runSimulation();
                 Thread.sleep(500);
