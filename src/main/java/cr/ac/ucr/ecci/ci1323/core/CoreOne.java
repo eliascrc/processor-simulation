@@ -109,6 +109,47 @@ public class CoreOne extends AbstractCore {
     }
 
     @Override
+    protected boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int dataCachePositionNumber, int positionOffset, int value) {
+        if (dataCachePosition.getState() == CachePositionState.MODIFIED) {
+            dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+            dataCachePosition.unlock();
+            this.advanceClockCycle();
+            return true;
+        }
+
+        // Data Cache Position is shared
+        DataBus dataBus = this.dataCache.getDataBus();
+        if (!dataBus.tryLock()) {
+            dataCachePosition.unlock();
+            this.advanceClockCycle();
+            return false;
+        }
+
+        this.advanceClockCycle();
+
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
+        DataCachePosition otherCachePosition = dataBus.getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
+
+        while (!otherCachePosition.tryLock()) {
+            this.advanceClockCycle();
+        }
+
+        this.advanceClockCycle();
+
+        if (otherCachePosition.getTag() == blockNumber && otherCachePosition.getState() != CachePositionState.SHARED)
+            otherCachePosition.setState(CachePositionState.INVALID);
+
+        dataCachePosition.setState(CachePositionState.MODIFIED);
+        dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+
+        otherCachePosition.unlock();
+        dataBus.unlock();
+        dataCachePosition.unlock();
+
+        return true;
+    }
+
+    @Override
     protected boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
         DataBus dataBus = this.dataCache.getDataBus();
 

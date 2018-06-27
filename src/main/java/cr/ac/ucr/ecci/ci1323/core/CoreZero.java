@@ -36,8 +36,12 @@ public class CoreZero extends AbstractCore {
     public CoreZero(Phaser simulationBarrier, int maxQuantum, Context startingContext,
                     SimulationController simulationController, InstructionBus instructionBus,
                     DataBus dataBus, int coreNumber) {
+
         super(simulationBarrier, maxQuantum, startingContext, simulationController,
                 SimulationConstants.TOTAL_CORE_ZERO_CACHE_POSITIONS, instructionBus, dataBus, coreNumber);
+
+        if (startingContext == null)
+            System.exit(500);
 
         this.waitingContext = null;
         this.reservedDataCachePosition = new int[]{-1, -1};
@@ -97,21 +101,6 @@ public class CoreZero extends AbstractCore {
         this.simulationBarrier.arriveAndAwaitAdvance();
 
         if (oldContextChange != ContextChange.NONE) {
-
-            if (this.lockedDataCachePosition != null) {
-                this.lockedDataCachePosition.unlock();
-                this.lockedDataCachePosition = null;
-            }
-
-            if (this.lockedOtherDataCachePosition != null) {
-                this.lockedOtherDataCachePosition.unlock();
-                this.lockedOtherDataCachePosition = null;
-            }
-
-            if (this.lockedDataBus != null) {
-                this.lockedDataBus.unlock();
-                this.lockedDataBus = null;
-            }
 
             this.setContextFinished(false);
             this.setContextWaitingForReservation(false);
@@ -300,6 +289,10 @@ public class CoreZero extends AbstractCore {
                 return this.solveDataStoreMiss(nextBlockNumber, dataCachePosition, dataCachePositionOffset, nextCachePosition,
                         finalRegister, this);
 
+            case STORE_HIT:
+                return this.solveDataStoreHit(nextBlockNumber, dataCachePosition, nextCachePosition, dataCachePositionOffset,
+                        finalRegister, this);
+
             default:
                 throw new IllegalArgumentException("Invalid Miss Type in core zero.");
         }
@@ -367,22 +360,24 @@ public class CoreZero extends AbstractCore {
         return true;
     }
 
-    @Override
-    protected boolean coreZeroCanMakeReservation(int dataCachePositionNumber) {
+    private boolean canMakeReservation(int dataCachePositionNumber, AbstractThread callingThread) {
         int reservingContext = this.getReservedDataCachePosition()[1];
-        int contextNumber = this.currentContext.getContextNumber();
+        int contextNumber = callingThread.currentContext.getContextNumber();
 
         // If there is some other context that reserved a position
         if (reservingContext != -1 && reservingContext != contextNumber) {
             return false;
         }
 
-        this.setReservedDataCachePosition(dataCachePositionNumber, this.currentContext.getContextNumber());
+        this.setReservedDataCachePosition(dataCachePositionNumber, callingThread.currentContext.getContextNumber());
         return true;
     }
 
-    protected void coreZeroRemoveReservation() {
-        this.setReservedDataCachePosition(-1, -1);
+    @Override
+    protected boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
+        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
+
+        return this.enterCacheMiss(MissType.STORE, blockNumber, dataCachePositionNumber, dataCachePosition, positionOffset, value);
     }
 
     public boolean solveDataStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset,
@@ -452,10 +447,57 @@ public class CoreZero extends AbstractCore {
     }
 
     @Override
-    protected boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
-        int dataCachePositionNumber = this.calculateCachePosition(blockNumber, this.coreNumber);
+    protected boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int dataCachePositionNumber, int positionOffset, int value) {
+        return this.enterCacheMiss(MissType.STORE_HIT, blockNumber, dataCachePositionNumber, dataCachePosition, positionOffset, value);
+    }
 
-        return this.enterCacheMiss(MissType.STORE, blockNumber, dataCachePositionNumber, dataCachePosition, positionOffset, value);
+    public boolean solveDataStoreHit(int blockNumber, DataCachePosition dataCachePosition, int dataCachePositionNumber,
+                                     int positionOffset, int value, AbstractThread callingThread) {
+        if (dataCachePosition.getState() == CachePositionState.MODIFIED) {
+            dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+            dataCachePosition.unlock();
+            callingThread.advanceClockCycle();
+            return true;
+        }
+
+        // Data Cache Position is shared
+        if (!this.canMakeReservation(dataCachePositionNumber, callingThread)) {
+            dataCachePosition.unlock();
+            callingThread.advanceClockCycle();
+            return false;
+        }
+
+        DataBus dataBus = this.dataCache.getDataBus();
+        if (!dataBus.tryLock()) {
+            dataCachePosition.unlock();
+            callingThread.advanceClockCycle();
+            return false;
+        }
+
+        callingThread.advanceClockCycle();
+
+        int otherDataCachePositionNumber = this.calculateOtherDataCachePosition(dataCachePosition.getTag());
+        DataCachePosition otherCachePosition = dataBus.getOtherCachePosition(this.coreNumber, otherDataCachePositionNumber);
+
+        while (!otherCachePosition.tryLock()) {
+            callingThread.advanceClockCycle();
+        }
+        callingThread.advanceClockCycle();
+
+        if (otherCachePosition.getTag() == blockNumber && otherCachePosition.getState() != CachePositionState.SHARED)
+            otherCachePosition.setState(CachePositionState.INVALID);
+
+        dataCachePosition.setState(CachePositionState.MODIFIED);
+        dataCachePosition.getDataBlock().getWords()[positionOffset] = value;
+
+        otherCachePosition.unlock();
+
+        this.setReservedDataCachePosition(-1, -1);
+
+        dataBus.unlock();
+        dataCachePosition.unlock();
+
+        return true;
     }
 
     private void solvedMiss() {
