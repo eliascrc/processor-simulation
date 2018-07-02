@@ -72,9 +72,6 @@ public class CoreZero extends AbstractCore {
         super(simulationBarrier, maxQuantum, startingContext, simulationController,
                 SimulationConstants.TOTAL_CORE_ZERO_CACHE_POSITIONS, instructionBus, dataBus, coreNumber);
 
-        if (startingContext == null)
-            System.exit(500);
-
         this.waitingContext = null;
         this.reservedDataCachePosition = new int[]{-1, -1};
         this.reservedInstructionCachePosition = -1;

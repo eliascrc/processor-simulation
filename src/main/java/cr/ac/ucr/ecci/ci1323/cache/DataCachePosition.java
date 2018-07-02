@@ -90,7 +90,7 @@ public class DataCachePosition {
         System.out.print("Etiqueta " + this.tag + ", Estado: " + this.cachePositionState + ", Bloque de Datos: { ");
 
         if (this.dataBlock == null)
-            System.out.print("vacio");
+            System.out.print("Vacio");
         else
             this.dataBlock.printBlock();
         System.out.println(" }");

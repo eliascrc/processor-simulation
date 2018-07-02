@@ -416,7 +416,6 @@ public abstract class AbstractCore extends AbstractThread {
         int sourceRegister = this.currentContext.getRegisters()[instruction.getInstructionFields()[1]];
         int immediate = instruction.getInstructionFields()[3];
         int blockNumber = (sourceRegister + immediate) / SimulationConstants.BLOCK_SIZE;
-        System.out.println("@ " + sourceRegister + " " + immediate + " " + blockNumber);
         return blockNumber;
     }
 
