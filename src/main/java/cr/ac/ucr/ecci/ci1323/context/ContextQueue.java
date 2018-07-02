@@ -36,8 +36,8 @@ public class ContextQueue {
      * @return false if not locked, true if locked
      */
     public synchronized boolean tryLock() {
-        if (this.contextQueueLock.isHeldByCurrentThread())
-            throw new TryLockException("The current thread already holds the context queue lock.");
+        if (this.contextQueueLock.isHeldByCurrentThread()) // If the thread already holds the context queue return true
+            return true;
 
         return this.contextQueueLock.tryLock();
     }

@@ -8,9 +8,12 @@ import cr.ac.ucr.ecci.ci1323.memory.InstructionBlock;
 import cr.ac.ucr.ecci.ci1323.memory.InstructionBus;
 import cr.ac.ucr.ecci.ci1323.exceptions.InvalidInstructionException;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,7 +24,7 @@ import java.util.List;
  */
 public class FileParser {
 
-    private List<File> files;
+    private List<InputStream> files;
     private ContextQueue contextQueue;
     private InstructionBus instructionBus;
 
@@ -41,7 +44,7 @@ public class FileParser {
             fileExists = (classLoader.getResource(i + ".txt") != null);
 
             if (fileExists) {
-                File file = new File(classLoader.getResource(i + ".txt").getFile());
+                InputStream file = classLoader.getResourceAsStream(i + ".txt");
                 this.files.add(file);
             }
         }
@@ -92,7 +95,7 @@ public class FileParser {
 
         int programCounterIndex = SimulationConstants.INSTRUCTIONS_START;
         int contextNumber = 0;
-        for (File file: files) {
+        for (InputStream file: files) {
             Context context = new Context(programCounterIndex, contextNumber);
             List<String> newLines = getLinesFromFile(file);
             lines.addAll(newLines);
@@ -109,11 +112,11 @@ public class FileParser {
      * @param file
      * @return the instructions of a context file
      */
-    private List<String> getLinesFromFile(File file) {
+    private List<String> getLinesFromFile(InputStream file) {
         List<String> fileLines = new LinkedList<>();
 
         try {
-            fileLines = FileUtils.readLines(file);
+            fileLines = IOUtils.readLines(file);
         } catch (IOException e) {
             e.printStackTrace();
         }
