@@ -167,8 +167,10 @@ public class SimulationController {
                     while (continueSim != 'c') {
                         System.out.print("Oprima la tecla 'c' para avanzar 20 ciclos de reloj ");
                         continueSimulation = scanner.next();
-                        continueSim = continueSimulation.charAt(0);
+                        if (continueSimulation.length() == 1)
+                            continueSim = continueSimulation.charAt(0);
                     }
+                    continueSim = 'x';
                     for (int i = 0; i < 20; i++) {
                         System.out.println("Ciclo de reloj #" + this.simulationTicks);
                         this.coreZero.printContext();
