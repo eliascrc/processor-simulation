@@ -1,25 +1,24 @@
 package cr.ac.ucr.ecci.ci1323.exceptions;
 
 /**
- * Runtime exception triggered if an invalid context change occurs.
+ * A runtime exception that is thrown when there are insufficient context files to run the simulation.
  *
- * @author Josue Leon Sarkis, Elias Calderon, Daniel Montes de Oca
+ * @author Josué León Sarkis, Daniel Montes de Oca, Elias Calderón
  */
-public class ContextChangeException extends RuntimeException {
-
+public class NoContextFilesException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     /**
      * Default constructor
      */
-    public ContextChangeException() {
+    public NoContextFilesException() {
     }
 
     /**
      * Creates a new exception with the specified message
      * @param message the message to display
      */
-    public ContextChangeException(String message) {
+    public NoContextFilesException(String message) {
         super(message);
     }
 
@@ -27,7 +26,7 @@ public class ContextChangeException extends RuntimeException {
      * Creates a new exception with the specified wrapped exception
      * @param cause the cause of the exception
      */
-    public ContextChangeException(Throwable cause) {
+    public NoContextFilesException(Throwable cause) {
         super(cause);
     }
 
@@ -36,7 +35,8 @@ public class ContextChangeException extends RuntimeException {
      * @param message the message to display
      * @param cause the cause of the exception
      */
-    public ContextChangeException(String message, Throwable cause) {
+    public NoContextFilesException(String message, Throwable cause) {
         super(message, cause);
     }
+
 }

@@ -2,6 +2,11 @@ package cr.ac.ucr.ecci.ci1323.memory;
 
 import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 
+/**
+ * Represents an instruction, which is composed of an array of integers.
+ *
+ * @author Josue Leon Sarkis, Elias Calderon, Daniel Montes de Oca
+ */
 public class Instruction {
 
     private volatile int[] instructionFields;

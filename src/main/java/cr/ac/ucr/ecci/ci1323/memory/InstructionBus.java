@@ -2,10 +2,19 @@ package cr.ac.ucr.ecci.ci1323.memory;
 
 import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 
+/**
+ * References the instruction memory and manages its access, through the Bus class.
+ *
+ * @author Josue Leon Sarkis, Elias Calderon, Daniel Montes de Oca
+ */
 public class InstructionBus extends Bus {
 
     private volatile InstructionBlock[] instructionMemory;
 
+    /**
+     * Constructor which sets the instruction memory to the one provided, created by the parser.
+     * @param instructionMemory
+     */
     public InstructionBus(InstructionBlock[] instructionMemory) {
         super();
         this.instructionMemory = instructionMemory;

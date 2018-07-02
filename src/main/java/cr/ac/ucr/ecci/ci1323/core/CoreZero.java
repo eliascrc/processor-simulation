@@ -56,14 +56,6 @@ public class CoreZero extends AbstractCore {
 
     public void changeContext() {
 
-        System.out.println("MH: " + this.missHandler + " con contexto " + ((this.missHandler == null)? "null" : this.missHandler.getCurrentContext().getContextNumber()));
-        System.out.println("WC: " + this.waitingContext);
-        System.out.println("FC: " + this.simulationController.getFinishedContexts().size() + " CQ: " + this.simulationController.getContextQueue().size());
-        System.out.println("CF: " + this.contextFinished);
-        System.out.println("EF: " + this.executionFinished);
-        System.out.println("CW: " + this.contextWaitingForReservation);
-        System.out.println("LI: " + this.lastInstruction);
-
         if (this.executionFinished && this.changeContext == ContextChange.SWAP_CONTEXTS) {
             // If the current context has finished or his quantum expired and the miss handler is requesting a swap
             // just advance and ignore the request until BRING_WAITING is set
@@ -204,13 +196,11 @@ public class CoreZero extends AbstractCore {
 
         while (this.getReservedDataCachePosition()[1] != -1 && this.getReservedDataCachePosition()[1] != contextNumber &&
                 this.getReservedDataCachePosition()[0] == dataCachePositionNumber) {
-            System.out.println("Waiting Reservation");
             this.advanceClockCycle();
         }
 
         DataCachePosition cachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
         while (!cachePosition.tryLock()) {
-            System.out.println("Waiting Lock");
             this.advanceClockCycle();
         }
     }

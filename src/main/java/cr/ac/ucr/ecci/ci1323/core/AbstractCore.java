@@ -41,9 +41,20 @@ public abstract class AbstractCore extends AbstractThread {
 
     protected volatile Context nextContext;
 
-    // TODO Remove this
     protected volatile boolean instructionFinished;
 
+    /**
+     * Registers the core to the Phaser barrier, and sets the provided references. It also initializes the
+     * instruction and data caches for the core.
+     * @param simulationBarrier
+     * @param maxQuantum
+     * @param startingContext
+     * @param simulationController
+     * @param totalCachePositions
+     * @param instructionBus
+     * @param dataBus
+     * @param coreNumber
+     */
     protected AbstractCore(Phaser simulationBarrier, int maxQuantum, Context startingContext,
                            SimulationController simulationController, int totalCachePositions,
                            InstructionBus instructionBus, DataBus dataBus, int coreNumber) {
@@ -80,6 +91,15 @@ public abstract class AbstractCore extends AbstractThread {
 
     protected Instruction lastInstruction;
 
+    /**
+     * Starts the execution of the core, which runs while its execution is not finished, which means that there are
+     * still contexts to execute. Its flow consists on calculating the block number, cache position and offset of the
+     * instruction to execute, and then tries to obtain the instruction block from the instruction cache. Once it has
+     * the instruction block, it gets the one to execute according to the offset and then increments the PC and
+     * executes the instruction. When the instruction is executed, it increments the context's quantum and finally it
+     * checks if its quantum expired to call the respective method if needed. After executed, it advances the
+     * clock cycle.
+     */
     protected void executeCore() {
 
         while (!this.executionFinished) {
@@ -120,6 +140,11 @@ public abstract class AbstractCore extends AbstractThread {
 
     }
 
+    /**
+     * Executes the instruction received, depending on the operation code. If no operation code is matched, it
+     * throws an exception.
+     * @param instruction
+     */
     protected void executeInstruction(Instruction instruction) {
         int operationCode = instruction.getOperationCode();
         switch (operationCode) {
@@ -164,6 +189,11 @@ public abstract class AbstractCore extends AbstractThread {
         }
     }
 
+    /**
+     * Advances the clock cycle of the current context, by first waiting on the barrier. It then calls the
+     * change context method to check if a context switch is needed. In the change context method the second barrier
+     * is present, in order to make the cycle incrementation and context switch in "zero time"
+     */
     @Override
     public void advanceClockCycle() {
         this.simulationBarrier.arriveAndAwaitAdvance();
@@ -171,12 +201,23 @@ public abstract class AbstractCore extends AbstractThread {
         this.changeContext();
     }
 
+    /**
+     * Executes a FIN instruction, by first calling the modifiable FIN, which is different for core zero. It then
+     * sets the finishing core of the context, for statistical purposes, and adds it to the finished contexts list,
+     * for the same purpose.
+     */
     private void executeFIN() {
         this.modifiableFINExecution();
         this.currentContext.setFinishingCore(this.coreNumber);
         this.simulationController.addFinishedThread(this.currentContext);
     }
 
+    /**
+     * Executes the FIN instruction of Core One by locking the context queue to see if there is another context to load.
+     * If no context is present, it sets the execution finished flag to true since the core finished its execution. If
+     * there is another one left, it sets the context change flag to NEXT_CONTEXT so that it is loaded on the next cycle.
+     * It finally unlocks the context queue.
+     */
     protected void modifiableFINExecution() {
         ContextQueue contextQueue = this.simulationController.getContextQueue();
 
@@ -196,6 +237,12 @@ public abstract class AbstractCore extends AbstractThread {
         contextQueue.unlock();
     }
 
+    /**
+     * Processes the quantum expiration of a context in the core, by trying to lock the context queue and when done,
+     * it gets the next context and restarts the quantum of the current context. If a context is present in the queue,
+     * it brings it to execution by pushing the current one and setting the change context flag to NEXT_CONTEXT so it
+     * is changed in the next cycle.
+     */
     protected void quantumExpired() {
         ContextQueue contextQueue = this.simulationController.getContextQueue();
 
@@ -218,6 +265,13 @@ public abstract class AbstractCore extends AbstractThread {
         contextQueue.unlock();
     }
 
+    /**
+     * Executes a LOAD instruction by first calculating the block number, offset and position and then mapping them
+     * to the respective DataCachePosition object. It then loops while the miss is not solved, locking the data
+     * cache position and then checking its tag and state. If its a different tag or the state is invalid, it handles
+     * the miss, if not, it is a hit and it loads the data from the respective position and offset in the cache.
+     * @param instruction
+     */
     protected void executeLW(Instruction instruction) {
 
         int blockNumber = this.calculateDataBlockNumber(instruction);
@@ -240,6 +294,13 @@ public abstract class AbstractCore extends AbstractThread {
         }
     }
 
+    /**
+     * Executes a STORE instruction by first calculating the block number, offset and position and then mapping them
+     * to the respective DataCachePosition object. It then loops while the miss is not solved, locking the data
+     * cache position and then checking its tag and state. If its a different tag or the state is invalid, it handles
+     * the miss, if not, it is a hit and it handles a store hit.
+     * @param instruction
+     */
     protected void executeSW(Instruction instruction) {
         int blockNumber = this.calculateDataBlockNumber(instruction);
         int dataCachePositionOffset = this.calculateDataOffset(instruction);
@@ -259,26 +320,46 @@ public abstract class AbstractCore extends AbstractThread {
         }
     }
 
+    /**
+     * Executes a DADDI instruction.
+     * @param instruction
+     */
     protected void executeDADDI(Instruction instruction) {
         this.getRegisters()[instruction.getField(2)] = this.getRegisters()[instruction.getField(1)]
                 + instruction.getField(3);
     }
 
+    /**
+     * Executes a DADD instruction.
+     * @param instruction
+     */
     protected void executeDADD(Instruction instruction) {
         this.getRegisters()[instruction.getField(3)] = this.getRegisters()[instruction.getField(1)]
                 + this.getRegisters()[instruction.getField(2)];
     }
 
+    /**
+     * Executes a DSUB instruction.
+     * @param instruction
+     */
     protected void executeDSUB(Instruction instruction) {
         this.getRegisters()[instruction.getField(3)] = this.getRegisters()[instruction.getField(1)]
                 - this.getRegisters()[instruction.getField(2)];
     }
 
+    /**
+     * Executes a DMUL instruction.
+     * @param instruction
+     */
     protected void executeDMUL(Instruction instruction) {
         this.getRegisters()[instruction.getField(3)] = this.getRegisters()[instruction.getField(1)]
                 * this.getRegisters()[instruction.getField(2)];
     }
 
+    /**
+     * Executes a DDIV instruction.
+     * @param instruction
+     */
     protected void executeDDIV(Instruction instruction) {
         try {
             this.getRegisters()[instruction.getField(3)] = this.getRegisters()[instruction.getField(1)]
@@ -289,6 +370,10 @@ public abstract class AbstractCore extends AbstractThread {
         }
     }
 
+    /**
+     * Executes a BEQZ instruction.
+     * @param instruction
+     */
     protected void executeBEQZ(Instruction instruction) {
         if (this.getRegisters()[instruction.getField(1)] == 0) {
             int newPC = this.getPC() + 4 * instruction.getField(3);
@@ -296,6 +381,10 @@ public abstract class AbstractCore extends AbstractThread {
         }
     }
 
+    /**
+     * Executes a BNEZ instruction.
+     * @param instruction
+     */
     protected void executeBNEZ(Instruction instruction) {
         if (this.getRegisters()[instruction.getField(1)] != 0) {
             int newPC = this.getPC() + 4 * instruction.getField(3);
@@ -303,12 +392,20 @@ public abstract class AbstractCore extends AbstractThread {
         }
     }
 
+    /**
+     * Executes a JAL instruction.
+     * @param instruction
+     */
     protected void executeJAL(Instruction instruction) {
         this.getRegisters()[31] = this.getPC();
         int newPC = this.getPC() + instruction.getField(3);
         this.setPC(newPC);
     }
 
+    /**
+     * Executes a JR instruction.
+     * @param instruction
+     */
     protected void executeJR(Instruction instruction) {
         this.setPC(this.getRegisters()[instruction.getField(1)]);
     }
@@ -385,6 +482,9 @@ public abstract class AbstractCore extends AbstractThread {
         return (this.currentContext.getProgramCounter() % SimulationConstants.BLOCK_SIZE) / SimulationConstants.INSTRUCTIONS_PER_BLOCK;
     }
 
+    /**
+     * Prints the instruction cache and data cache of the core.
+     */
     public void printCaches() {
         System.out.println("Caches para el Nucleo #" + this.coreNumber);
 
@@ -404,6 +504,9 @@ public abstract class AbstractCore extends AbstractThread {
         System.out.println();
     }
 
+    /**
+     * Prints the context being executed.
+     */
     public void printContext() {
         System.out.println("El Contexto #" + this.currentContext.getContextNumber() + " esta corriendo en el Nucleo #" +
                 this.coreNumber);

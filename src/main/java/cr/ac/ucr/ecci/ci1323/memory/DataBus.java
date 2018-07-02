@@ -4,6 +4,12 @@ import cr.ac.ucr.ecci.ci1323.cache.DataCache;
 import cr.ac.ucr.ecci.ci1323.cache.DataCachePosition;
 import cr.ac.ucr.ecci.ci1323.commons.SimulationConstants;
 
+/**
+ * References the shared data memory and manages its access, through the Bus class. It also references the data cache
+ * for each core, in order to access them.
+ *
+ * @author Josue Leon Sarkis, Elias Calderon, Daniel Montes de Oca
+ */
 public class DataBus extends Bus {
 
     private volatile DataCache coreZeroCache;

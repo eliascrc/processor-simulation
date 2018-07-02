@@ -15,12 +15,22 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * Manages all the parsing of the contexts, which includes filling the instruction memory with the respective
+ * instructions and also initializing each context with its according PC.
+ */
 public class FileParser {
 
     private List<File> files;
     private ContextQueue contextQueue;
     private InstructionBus instructionBus;
 
+    /**
+     * Constructor which checks how many contexts there are to add them to the files list and then parse each
+     * one of them later.
+     * @param contextQueue
+     * @param instructionBus
+     */
     public FileParser(ContextQueue contextQueue, InstructionBus instructionBus) {
         this.contextQueue = contextQueue;
         this.instructionBus = instructionBus;
@@ -37,6 +47,13 @@ public class FileParser {
         }
     }
 
+    /**
+     * Obtains all the instructions from the provided context files. For each instruction line it creates an
+     * Instruction object and adds it to the respective instruction block which is added to the instruction memory
+     * once the instruction block contains the 4 Instruction objects. If it is the last block and it didnt' fill the
+     * 4 Instruction slots, it still adds it to the memory. Finally, it sets the instruction memory to the instruction
+     * bus.
+     */
     public void prepareSimulation() {
         List<String> instructions = this.readFiles();
 
@@ -63,6 +80,13 @@ public class FileParser {
         this.instructionBus.setInstructionMemory(instructionMemory);
     }
 
+    /**
+     * For each context file, it reads its lines of instructions and creates a new context with its respective
+     * initial program counter based on where the last instruction of the previous context finished, or from the
+     * memory direction in which instructions start (384) for the first one. It then pushes each context to the
+     * context queue.
+     * @return all the lines of instructions from all contexts
+     */
     private List<String> readFiles() {
         List<String> lines = new LinkedList<>();
 
@@ -80,6 +104,11 @@ public class FileParser {
         return lines;
     }
 
+    /**
+     * Reads all the lines of instructions from each context file.
+     * @param file
+     * @return the instructions of a context file
+     */
     private List<String> getLinesFromFile(File file) {
         List<String> fileLines = new LinkedList<>();
 
@@ -92,6 +121,11 @@ public class FileParser {
         return fileLines;
     }
 
+    /**
+     * Converts an instruction of 4 string numbers into an array of 4 ints.
+     * @param strings
+     * @return the array of the 4 ints that compose an instruction
+     */
     private int[] stringsToInts(String[] strings) {
         int [] ints = new  int[strings.length];
         for (int i = 0; i < strings.length; i++)
@@ -100,6 +134,11 @@ public class FileParser {
         return ints;
     }
 
+    /**
+     * Parses each instruction line of a context file to an Instruction object.
+     * @param fileLine
+     * @return the Instruction object with the instruction fields
+     */
     private Instruction parseInstruction(String fileLine) {
         int[] instructionFields = stringsToInts(fileLine.split(" "));
         if (instructionFields.length != 4)

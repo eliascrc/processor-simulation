@@ -2,6 +2,11 @@ package cr.ac.ucr.ecci.ci1323.memory;
 
 import java.util.Arrays;
 
+/**
+ * Represents a data block which is composed by an array of integers which is the data.
+ *
+ * @author Josue Leon Sarkis, Elias Calderon, Daniel Montes de Oca
+ */
 public class DataBlock implements Cloneable {
 
     private volatile int[] words;
@@ -10,6 +15,11 @@ public class DataBlock implements Cloneable {
         this.words = words;
     }
 
+    /**
+     * Returns a copy of the data block which is needed, because if not it would return a reference to it and it will
+     * modify the shared data memory, which is not desired.
+     * @return
+     */
     @Override
     public DataBlock clone() {
         try {
