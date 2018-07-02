@@ -54,7 +54,7 @@ public class ContextQueue {
 
     /**
      * Synchronized method for getting the next context in the queue
-     * @return
+     * @return the next context in the context queue
      */
     public synchronized Context getNextContext() {
         if (!this.contextQueueLock.isHeldByCurrentThread())
@@ -67,6 +67,9 @@ public class ContextQueue {
         this.contextQueue.add(context);
     }
 
+    /**
+     * Prints the information of the contexts in the context queue
+     */
     public void print() {
         for (Context context : this.contextQueue) {
             context.print();

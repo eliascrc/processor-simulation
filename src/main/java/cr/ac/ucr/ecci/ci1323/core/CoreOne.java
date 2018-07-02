@@ -21,6 +21,16 @@ import java.util.concurrent.Phaser;
  */
 public class CoreOne extends AbstractCore {
 
+    /**
+     * Class constructor
+     * @param simulationBarrier the barrier that controls the simulation
+     * @param maxQuantum the quantum that the user specified
+     * @param startingContext the first context of the core
+     * @param simulationController the controller of the simulation
+     * @param instructionBus the instruction bus of the simulation
+     * @param dataBus the data bus of the simulation
+     * @param coreNumber the number of the core, usually 1
+     */
     public CoreOne(Phaser simulationBarrier, int maxQuantum, Context startingContext,
                    SimulationController simulationController, InstructionBus instructionBus,
                    DataBus dataBus, int coreNumber) {
@@ -28,11 +38,17 @@ public class CoreOne extends AbstractCore {
                 SimulationConstants.TOTAL_FIRST_CORE_CACHE_POSITIONS, instructionBus, dataBus, coreNumber);
     }
 
+    /**
+     * Starts the execution of the core
+     */
     @Override
     public void run() {
         super.executeCore();
     }
 
+    /**
+     * Changes the context if necessary
+     */
     @Override
     public void changeContext() {
 
@@ -54,12 +70,20 @@ public class CoreOne extends AbstractCore {
 
     }
 
+    /**
+     * Executes a load instruction
+     * @param instruction the instruction that will be executed
+     */
     @Override
     protected void executeLW(Instruction instruction) {
         super.executeLW(instruction);
 
     }
 
+    /**
+     * Tries to lock a data cache position
+     * @param dataCachePositionNumber the number of the position that will be locked
+     */
     @Override
     protected void lockDataCachePosition(int dataCachePositionNumber) {
         DataCachePosition cachePosition = this.dataCache.getDataCachePosition(dataCachePositionNumber);
@@ -68,6 +92,15 @@ public class CoreOne extends AbstractCore {
         }
     }
 
+    /**
+     * @param blockNumber the block number of the data block that will be attempted to retrieve
+     * @param dataCachePosition the data cache position that will hold the retrieved data block
+     * @param positionOffset the offset of the word that is being searched
+     * @param dataCachePositionNumber the number of the data cache position that will get the block if the miss is
+     *                                solved
+     * @param finalRegister the register in which the word will be loaded
+     * @return true if the miss was solved, false if not
+     */
     @Override
     protected boolean handleLoadMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int dataCachePositionNumber, int finalRegister) {
 
@@ -108,6 +141,15 @@ public class CoreOne extends AbstractCore {
         return true;
     }
 
+    /**
+     * Handles a store hit it can fail and return false if the position was shared
+     * @param blockNumber the block number in which the value must be stored
+     * @param dataCachePosition the data cache position that may be modified
+     * @param dataCachePositionNumber the number of the data cache position
+     * @param positionOffset the offset that marks the word that may be modified
+     * @param value the value that should be stored
+     * @return true if the value could be stored, false if not
+     */
     @Override
     protected boolean handleStoreHit(int blockNumber, DataCachePosition dataCachePosition, int dataCachePositionNumber, int positionOffset, int value) {
         if (dataCachePosition.getState() == CachePositionState.MODIFIED) {
@@ -149,6 +191,14 @@ public class CoreOne extends AbstractCore {
         return true;
     }
 
+    /**
+     * Called when a store miss is detected, tries to solve it
+     * @param blockNumber the number of the block that caused the miss
+     * @param dataCachePosition the data cache position tha
+     * @param positionOffset the offset that marks the word that may be modified
+     * @param value the value that will be stored in the block
+     * @return true if it could solve the miss, false if not
+     */
     @Override
     protected boolean handleStoreMiss(int blockNumber, DataCachePosition dataCachePosition, int positionOffset, int value) {
         DataBus dataBus = this.dataCache.getDataBus();
@@ -204,7 +254,13 @@ public class CoreOne extends AbstractCore {
         return true;
     }
 
-
+    /**
+     * Gets an instruction block from the instruction cache of core 1
+     * @param nextInstructionBlockNumber the block number of the instruction block that is needed
+     * @param nextInstructionCachePosition the cache position in which the instruction block is (it may not be there,
+     *                                     in that case a miss occurs)
+     * @return the instruction block with the provided block number
+     */
     @Override
     protected InstructionBlock getInstructionBlockFromCache(int nextInstructionBlockNumber, int nextInstructionCachePosition) {
         InstructionCachePosition instructionCachePosition = this.instructionCache.getInstructionCachePosition(

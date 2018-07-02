@@ -1,9 +1,9 @@
 package cr.ac.ucr.ecci.ci1323.exceptions;
 
 /**
- * A runtime exception that is thrown when an instruction doesn´t meet the standard structure
+ * A runtime exception that is thrown when an instruction doesn't meet the standard structure
  *
- * @author Daniel Montes de Oca
+ * @author Josué León Sarkis, Elías Calderón, Daniel Montes de Oca
  */
 public class InvalidInstructionException extends RuntimeException {
 
