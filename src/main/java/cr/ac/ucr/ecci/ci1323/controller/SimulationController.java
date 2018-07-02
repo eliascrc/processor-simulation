@@ -110,16 +110,16 @@ public class SimulationController {
         }
 
         scanner = new Scanner(System.in);
-        System.out.print("Desea correr la simulacion en modo lento? 1. Sí 2. No ");
+        System.out.print("Desea correr la simulacion en modo lento? 1. Si 2. No ");
 
         int slowMode = -1;
         if (scanner.hasNextInt()) {
             slowMode = scanner.nextInt();
         }
         while (slowMode != 1 && slowMode != 2) {
-            System.out.print("Desea correr la simulacion en modo lento? 1. Sí 2. No ");
+            System.out.print("Desea correr la simulacion en modo lento? 1. Si 2. No ");
             while (!scanner.hasNextInt()) {
-                System.out.print("Desea correr la simulacion en modo lento? 1. Sí 2. No ");
+                System.out.print("Desea correr la simulacion en modo lento? 1. Si 2. No ");
                 scanner.next();
             }
             slowMode = scanner.nextInt();
