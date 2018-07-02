@@ -19,6 +19,11 @@ public class InstructionCache {
     private volatile InstructionCachePosition[] instructionCachePositions;
     private volatile InstructionBus instructionBus;
 
+    /**
+     * Class constructor
+     * @param instructionBus the instruction bus of the simulation
+     * @param cacheSize the size of the instruction cache
+     */
     public InstructionCache(InstructionBus instructionBus, int cacheSize) {
         this.instructionBus = instructionBus;
 
@@ -49,6 +54,12 @@ public class InstructionCache {
         this.instructionBus = instructionBus;
     }
 
+    /**
+     * Gets an instruction block from memory into an instruction cache position
+     * @param nextInstructionBlockNumber the number of the instruction block that will be retrieved
+     * @param nextInstructionPositionNumber the number of the instruction block that will get the instruction block
+     * @param callingThread the thread calling the method
+     */
     public void getInstructionBlockFromMemory(int nextInstructionBlockNumber, int nextInstructionPositionNumber,
                                               AbstractThread callingThread) {
         while (!this.instructionBus.tryLock()) {

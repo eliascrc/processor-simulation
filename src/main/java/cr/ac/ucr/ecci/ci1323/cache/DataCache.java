@@ -29,6 +29,11 @@ public class DataCache {
         this.dataBus = dataBus;
     }
 
+    /**
+     * Writes a data block to memory, includes the wait for the 40 clock ticks
+     * @param dataCachePosition the data cache position that has the block
+     * @param callingThread the thread that is calling this method
+     */
     public void writeBlockToMemory (DataCachePosition dataCachePosition, AbstractThread callingThread) {
 
         // Advances 40 clock cycles
@@ -41,6 +46,12 @@ public class DataCache {
 
     }
 
+    /**
+     * Gets a block from memory, includes the wait for the 40 clock ticks
+     * @param dataBlockNumber the number of the memory block that will be retrieved
+     * @param dataPositionNumber the number of data cache position that will hold the retrieved block
+     * @param callingThread the thread that is calling this method
+     */
     public void getBlockFromMemory(int dataBlockNumber, int dataPositionNumber, AbstractThread callingThread) {
 
         // Advances 40 clock cycles
@@ -53,6 +64,11 @@ public class DataCache {
         this.dataCachePositions[dataPositionNumber].setTag(dataBlockNumber);
     }
 
+    /**
+     * Gets a cache position from the cache of the other core
+     * @param dataCachePosition the data cache position of the current core, its data block will be overwritten
+     * @param otherDataCachePosition the data cache position of the other core
+     */
     public void setPositionFromAnother(DataCachePosition dataCachePosition, DataCachePosition otherDataCachePosition) {
         dataCachePosition.setDataBlock(otherDataCachePosition.getDataBlock().clone());
         dataCachePosition.setState(CachePositionState.SHARED);

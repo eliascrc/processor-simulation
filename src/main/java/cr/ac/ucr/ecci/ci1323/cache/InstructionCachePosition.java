@@ -15,6 +15,11 @@ public class InstructionCachePosition {
     private volatile int tag;
     private volatile InstructionBlock instructionBlock;
 
+    /**
+     * Class constructor
+     * @param tag the tag of the instruction cache position
+     * @param instructionBlock the instruction block that the instruction cache position holds
+     */
     public InstructionCachePosition(int tag, InstructionBlock instructionBlock) {
         this.tag = tag;
         this.instructionBlock = instructionBlock;
@@ -36,6 +41,9 @@ public class InstructionCachePosition {
         this.instructionBlock = instructionBlock;
     }
 
+    /**
+     * Prints the information of the instruction cache position
+     */
     public void print() {
         System.out.print("Etiqueta " + this.tag + ", Bloque de Instrucciones: { ");
         if (this.instructionBlock != null)
